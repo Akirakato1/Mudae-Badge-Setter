@@ -37,6 +37,7 @@ confirm
 ```
 
 Then it sends one `$<badge> <count>` command plus `y` for each selected badge count above `0`, such as `$bronze 3` then `y`.
+If ruby is set to `4`, `$ruby 4` is sent before the other badge commands.
 
 ## Focus Behavior
 

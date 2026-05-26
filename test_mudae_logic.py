@@ -32,6 +32,28 @@ class MudaeLogicTests(unittest.TestCase):
             ],
         )
 
+    def test_build_command_sequence_sends_ruby_four_first(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts["bronze"] = 2
+        counts["ruby"] = 4
+        counts["diamond"] = 1
+
+        commands = build_command_sequence("718568383347556424", counts)
+
+        self.assertEqual(
+            commands,
+            [
+                "$kakerarefund <@718568383347556424>",
+                "confirm",
+                "$ruby 4",
+                "y",
+                "$bronze 2",
+                "y",
+                "$diamond 1",
+                "y",
+            ],
+        )
+
     def test_validate_user_id_accepts_digits_only(self):
         self.assertEqual(validate_user_id(" 718568383347556424 "), "718568383347556424")
 

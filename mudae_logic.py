@@ -31,11 +31,17 @@ def normalize_badge_counts(raw_counts):
     return {badge: clamp_badge_count(raw_counts.get(badge, 0)) for badge in BADGES}
 
 
+def command_badge_order(badge_counts):
+    if badge_counts.get("ruby") == 4:
+        return ("ruby",) + tuple(badge for badge in BADGES if badge != "ruby")
+    return BADGES
+
+
 def build_command_sequence(raw_user_id, raw_badge_counts):
     user_id = validate_user_id(raw_user_id)
     badge_counts = normalize_badge_counts(raw_badge_counts)
     commands = [f"$kakerarefund <@{user_id}>", "confirm"]
-    for badge in BADGES:
+    for badge in command_badge_order(badge_counts):
         count = badge_counts[badge]
         if count:
             commands.extend([f"${badge} {count}", "y"])
