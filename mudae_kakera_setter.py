@@ -22,6 +22,17 @@ from mudae_logic import (
 CONFIG_PATH = Path(__file__).with_name("mudae_kakera_configs.json")
 STATE_PATH = Path(__file__).with_name("mudae_kakera_last_state.json")
 APP_TITLE = "Mudae Kakera Setter"
+HELP_TEXT = """How to use this app:
+
+1. Open Discord desktop to the text channel where Mudae should receive commands.
+2. Enter only the numeric Discord user ID, not <@...>.
+3. Set the Message delay. Use a larger value if Discord misses messages.
+4. Set badge counts from 0 to 4.
+5. Enter a configuration name and click Save / Update to save the current settings.
+6. Click a saved configuration to load it into the fields.
+7. Click Set to run the sequence.
+
+When Set runs, the app briefly focuses Discord, clicks the current channel message box, sends the refund/confirm commands, sends the badge commands, then returns focus to this window."""
 
 
 class WindowsClipboard:
@@ -365,11 +376,17 @@ class KakeraSetterApp:
 
         action_frame = ttk.Frame(main)
         action_frame.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        action_frame.columnconfigure(0, weight=1)
+        action_frame.columnconfigure(1, weight=1)
 
-        ttk.Label(action_frame, textvariable=self.status_var).grid(row=0, column=0, sticky="w")
+        ttk.Button(action_frame, text="?", width=3, command=self.show_help).grid(
+            row=0,
+            column=0,
+            sticky="w",
+            padx=(0, 8),
+        )
+        ttk.Label(action_frame, textvariable=self.status_var).grid(row=0, column=1, sticky="w")
         self.set_button = ttk.Button(action_frame, text="Set", command=self.start_set_run)
-        self.set_button.grid(row=0, column=1, sticky="e")
+        self.set_button.grid(row=0, column=2, sticky="e")
 
     def _refresh_config_list(self):
         selected_name = self.config_name_var.get()
@@ -421,6 +438,9 @@ class KakeraSetterApp:
         name = self.config_list.get(selection[0])
         self._apply_config(name, self.configs[name])
         self.status_var.set(f"Loaded configuration: {name}")
+
+    def show_help(self):
+        messagebox.showinfo(f"{APP_TITLE} Help", HELP_TEXT)
 
     def _last_state(self):
         state = self._current_config()

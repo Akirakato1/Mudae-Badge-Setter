@@ -26,6 +26,8 @@ python mudae_kakera_setter.py
 6. Optionally enter a configuration name and click `Save / Update`.
 7. Click `Set`.
 
+Click the `?` button in the lower-left corner of the app to show these usage notes inside the app.
+
 The app sends:
 
 ```text

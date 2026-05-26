@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from mudae_kakera_setter import AppStateStore
+from mudae_kakera_setter import AppStateStore, HELP_TEXT
 
 
 class AppStateStoreTests(unittest.TestCase):
@@ -26,6 +26,12 @@ class AppStateStoreTests(unittest.TestCase):
         self.assertEqual(loaded["delay"], 1.5)
         self.assertEqual(loaded["badges"]["bronze"], 2)
         self.assertEqual(loaded["badges"]["diamond"], 4)
+
+    def test_help_text_explains_core_workflow(self):
+        self.assertIn("Open Discord", HELP_TEXT)
+        self.assertIn("numeric Discord user ID", HELP_TEXT)
+        self.assertIn("Message delay", HELP_TEXT)
+        self.assertIn("Set", HELP_TEXT)
 
 
 if __name__ == "__main__":
