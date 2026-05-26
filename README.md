@@ -36,7 +36,7 @@ $kakerarefund <@user_id>
 confirm
 ```
 
-Then it sends `$bronze`/`y`, `$silver`/`y`, `$gold`/`y`, `$sapphire`/`y`, `$ruby`/`y`, `$emerald`/`y`, and `$diamond`/`y` according to the counts you selected.
+Then it sends one `$<badge> <count>` command plus `y` for each selected badge count above `0`, such as `$bronze 3` then `y`.
 
 ## Focus Behavior
 

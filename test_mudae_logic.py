@@ -13,7 +13,7 @@ from mudae_logic import (
 
 
 class MudaeLogicTests(unittest.TestCase):
-    def test_build_command_sequence_formats_refund_and_repeats_badges(self):
+    def test_build_command_sequence_formats_refund_and_sends_badge_counts(self):
         counts = {badge: 0 for badge in BADGES}
         counts["bronze"] = 2
         counts["diamond"] = 1
@@ -25,11 +25,9 @@ class MudaeLogicTests(unittest.TestCase):
             [
                 "$kakerarefund <@718568383347556424>",
                 "confirm",
-                "$bronze",
+                "$bronze 2",
                 "y",
-                "$bronze",
-                "y",
-                "$diamond",
+                "$diamond 1",
                 "y",
             ],
         )

@@ -36,8 +36,9 @@ def build_command_sequence(raw_user_id, raw_badge_counts):
     badge_counts = normalize_badge_counts(raw_badge_counts)
     commands = [f"$kakerarefund <@{user_id}>", "confirm"]
     for badge in BADGES:
-        for _ in range(badge_counts[badge]):
-            commands.extend([f"${badge}", "y"])
+        count = badge_counts[badge]
+        if count:
+            commands.extend([f"${badge} {count}", "y"])
     return commands
 
 
