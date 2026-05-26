@@ -2,7 +2,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from mudae_kakera_setter import AppStateStore, HELP_LINES, USER_ID_HELP_TEXT
+from mudae_kakera_setter import (
+    AppStateStore,
+    HELP_LINES,
+    USER_ID_HELP_TEXT,
+    screen_fraction_geometry,
+)
 
 
 class AppStateStoreTests(unittest.TestCase):
@@ -39,6 +44,9 @@ class AppStateStoreTests(unittest.TestCase):
         self.assertIn("Advanced", USER_ID_HELP_TEXT)
         self.assertIn("Developer Mode", USER_ID_HELP_TEXT)
         self.assertIn("Copy ID", USER_ID_HELP_TEXT)
+
+    def test_screen_fraction_geometry_uses_30_percent_of_screen(self):
+        self.assertEqual(screen_fraction_geometry(2560, 1440), "768x432")
 
 
 if __name__ == "__main__":

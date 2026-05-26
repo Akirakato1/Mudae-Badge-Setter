@@ -23,6 +23,7 @@ CONFIG_PATH = Path(__file__).with_name("mudae_kakera_configs.json")
 STATE_PATH = Path(__file__).with_name("mudae_kakera_last_state.json")
 APP_TITLE = "Mudae Kakera Setter"
 POINTS_PER_INCH = 72.0
+WINDOW_SCREEN_FRACTION = 0.30
 HELP_LINES = (
     "How to use this app:",
     "",
@@ -63,6 +64,12 @@ def configure_tk_scaling(root):
         return
     if pixels_per_inch > 0:
         root.tk.call("tk", "scaling", pixels_per_inch / POINTS_PER_INCH)
+
+
+def screen_fraction_geometry(screen_width, screen_height, fraction=WINDOW_SCREEN_FRACTION):
+    width = max(1, int(screen_width * fraction))
+    height = max(1, int(screen_height * fraction))
+    return f"{width}x{height}"
 
 
 class WindowsClipboard:
@@ -401,8 +408,10 @@ class KakeraSetterApp:
     def __init__(self, root):
         self.root = root
         self.root.title(APP_TITLE)
-        self.root.geometry("1120x1040")
-        self.root.minsize(480, 460)
+        self.root.geometry(
+            screen_fraction_geometry(self.root.winfo_screenwidth(), self.root.winfo_screenheight())
+        )
+        self.root.minsize(360, 300)
 
         self.store = ConfigStore(CONFIG_PATH)
         self.state_store = AppStateStore(STATE_PATH)
