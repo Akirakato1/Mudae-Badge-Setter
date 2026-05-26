@@ -37,7 +37,7 @@ confirm
 ```
 
 Then it sends one `$<badge> <count>` command plus `y` for each selected badge count above `0`, such as `$bronze 3` then `y`.
-If ruby is set to `4`, `$ruby 4` is sent before the other badge commands.
+If ruby is set to `4`, the app sends its prerequisites first, then `$ruby 4`, then the remaining badge commands.
 
 ## Focus Behavior
 
@@ -49,8 +49,12 @@ If Discord misses messages, increase the message delay.
 
 Saved configurations are written to `%APPDATA%\Mudae Badge Setter\configs.json`. This file stores badge counts only. On first launch after an update, the app migrates older config files into AppData if AppData does not already have the new file.
 
+If `configs.json` is empty or missing, the app seeds three built-in configurations: `Ruby 4 Minimum Cost`, `Sapphire 4 Minimum Cost`, and `Emerald 4 Minimum Cost`.
+
 Clicking a saved configuration loads only its badge counts into the UI. Saving again with the same name updates it. `Delete` removes the selected configuration, or the configuration named in the text field if none is selected.
 
 The app keeps permanent user ID and delay settings in `%APPDATA%\Mudae Badge Setter\settings.json`. This file stores only `user_id` and `delay`. Those fields are restored automatically the next time you open the app; the previous badge configuration is not auto-loaded.
+
+Badge costs, prerequisites, perks, and built-in default definitions are kept in `badge_data.json`.
 
 After a successful run, the popup says `Set to <configuration name>` when the current badge counts match a saved configuration. If they do not match a saved configuration, it uses the badge-count sequence instead, such as `Set to 3420000` for bronze 3, silver 4, gold 2, and the remaining badges 0.

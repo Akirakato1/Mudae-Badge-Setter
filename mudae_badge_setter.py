@@ -17,6 +17,7 @@ from mudae_logic import (
     find_matching_config_name,
     format_set_result_message,
     normalize_badge_counts,
+    seed_default_configurations,
     validate_delay,
     validate_user_id,
 )
@@ -515,7 +516,7 @@ class KakeraSetterApp:
         migrate_runtime_files()
         self.store = ConfigStore(CONFIG_PATH)
         self.settings_store = SettingsStore(SETTINGS_PATH)
-        self.configs = self.store.load()
+        self.configs = seed_default_configurations(self.store.load())
         self.store.save(self.configs)
         self.badge_vars = {}
 

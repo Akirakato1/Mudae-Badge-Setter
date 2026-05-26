@@ -4,8 +4,10 @@ from mudae_logic import (
     BADGES,
     DEFAULT_DELAY,
     build_command_sequence,
+    default_configurations,
     find_matching_config_name,
     format_set_result_message,
+    seed_default_configurations,
     normalize_config,
     validate_delay,
     validate_user_id,
@@ -32,9 +34,11 @@ class MudaeLogicTests(unittest.TestCase):
             ],
         )
 
-    def test_build_command_sequence_sends_ruby_four_first(self):
+    def test_build_command_sequence_sends_ruby_four_after_prerequisites(self):
         counts = {badge: 0 for badge in BADGES}
         counts["bronze"] = 2
+        counts["silver"] = 2
+        counts["gold"] = 2
         counts["ruby"] = 4
         counts["diamond"] = 1
 
@@ -45,14 +49,64 @@ class MudaeLogicTests(unittest.TestCase):
             [
                 "$kakerarefund <@718568383347556424>",
                 "confirm",
-                "$ruby 4",
-                "y",
                 "$bronze 2",
+                "y",
+                "$silver 2",
+                "y",
+                "$gold 2",
+                "y",
+                "$ruby 4",
                 "y",
                 "$diamond 1",
                 "y",
             ],
         )
+
+    def test_default_configurations_include_minimum_cost_targets(self):
+        defaults = default_configurations()
+
+        self.assertEqual(
+            defaults["Ruby 4 Minimum Cost"]["badges"],
+            {
+                "bronze": 2,
+                "silver": 2,
+                "gold": 2,
+                "sapphire": 0,
+                "ruby": 4,
+                "emerald": 0,
+                "diamond": 0,
+            },
+        )
+        self.assertEqual(
+            defaults["Sapphire 4 Minimum Cost"]["badges"],
+            {
+                "bronze": 2,
+                "silver": 2,
+                "gold": 2,
+                "sapphire": 4,
+                "ruby": 0,
+                "emerald": 0,
+                "diamond": 0,
+            },
+        )
+        self.assertEqual(
+            defaults["Emerald 4 Minimum Cost"]["badges"],
+            {
+                "bronze": 4,
+                "silver": 4,
+                "gold": 0,
+                "sapphire": 0,
+                "ruby": 0,
+                "emerald": 4,
+                "diamond": 0,
+            },
+        )
+
+    def test_seed_default_configurations_only_when_empty(self):
+        custom = {"custom": {"badges": {"bronze": 1}}}
+
+        self.assertEqual(seed_default_configurations(custom), custom)
+        self.assertEqual(set(seed_default_configurations({})), set(default_configurations()))
 
     def test_validate_user_id_accepts_digits_only(self):
         self.assertEqual(validate_user_id(" 718568383347556424 "), "718568383347556424")
