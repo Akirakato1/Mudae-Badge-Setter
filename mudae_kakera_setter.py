@@ -401,7 +401,7 @@ class KakeraSetterApp:
     def __init__(self, root):
         self.root = root
         self.root.title(APP_TITLE)
-        self.root.geometry("560x520")
+        self.root.geometry("1120x1040")
         self.root.minsize(480, 460)
 
         self.store = ConfigStore(CONFIG_PATH)
