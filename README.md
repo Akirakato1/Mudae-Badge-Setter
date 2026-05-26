@@ -25,9 +25,10 @@ python mudae_badge_setter.py
 5. Set each badge count from `0` to `4`.
 6. Check the live total cost and the next-level cost shown under each badge.
 7. Click `Edit Badge Cost` to change the badge prices used by the cost display.
-8. Optionally enter a configuration name and click `Save / Update` to save the current badge counts.
-9. Click `Delete` to remove the selected or named configuration.
-10. Click `Set`.
+8. Click `New` to clear the name and badge counts for a fresh configuration.
+9. Optionally enter a configuration name and click `Save / Update` to save the current badge counts.
+10. Click `Delete` to remove the selected or named configuration.
+11. Click `Set`.
 
 Click the `?` button in the lower-left corner of the app to show these usage notes inside the app. In that help popup, click `userID` to see how to find and copy your Discord ID.
 Click a badge name to show its costs, prerequisites, and perks.
@@ -55,7 +56,7 @@ Saved configurations are written to `%APPDATA%\Mudae Badge Setter\configs.json`.
 
 If `configs.json` is empty or missing, the app seeds three built-in configurations: `Ruby 4 Minimum Cost`, `Sapphire 4 Minimum Cost`, and `Emerald 4 Minimum Cost`.
 
-Clicking a saved configuration loads only its badge counts into the UI. Saving again with the same name updates it. `Delete` removes the selected configuration, or the configuration named in the text field if none is selected.
+Clicking a saved configuration loads only its badge counts into the UI. `New` clears the current name, list selection, and badge counts so you can build a fresh configuration. Saving again with the same name updates it. `Delete` removes the selected configuration, or the configuration named in the text field if none is selected.
 
 The app keeps permanent user ID and delay settings in `%APPDATA%\Mudae Badge Setter\settings.json`. This file stores only `user_id` and `delay`. Those fields are restored automatically the next time you open the app; the previous badge configuration is not auto-loaded.
 

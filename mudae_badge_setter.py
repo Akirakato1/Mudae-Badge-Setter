@@ -123,6 +123,8 @@ APP_TITLE = "Mudae Badge Setter"
 POINTS_PER_INCH = 72.0
 WINDOW_WIDTH_SCREEN_FRACTION = 0.35
 WINDOW_HEIGHT_SCREEN_FRACTION = 0.40
+HELP_POPUP_WIDTH_FRACTION = 0.30
+POPUP_HORIZONTAL_PADDING = 32
 BADGE_LEVELS = ((1, "I"), (2, "II"), (3, "III"), (4, "IV"))
 HELP_LINES = (
     "How to use this app:",
@@ -135,10 +137,11 @@ HELP_LINES = (
     "6. Check the total cost and each badge's next-level cost.",
     "7. Click Edit Badge Cost to change badge prices.",
     "8. Click a badge name to view its costs, prerequisites, and perks.",
-    "9. Enter a configuration name and click Save / Update to save the current badge counts.",
-    "10. Click a saved configuration to load it into the fields.",
-    "11. Use Delete to remove the selected or named configuration.",
-    "12. Click Set to run the sequence.",
+    "9. Click New to clear the name and badge counts for a fresh configuration.",
+    "10. Enter a configuration name and click Save / Update to save the current badge counts.",
+    "11. Click a saved configuration to load it into the fields.",
+    "12. Use Delete to remove the selected or named configuration.",
+    "13. Click Set to run the sequence.",
     "",
     "When Set runs, the app briefly focuses Discord, clicks the current channel message box, sends the refund/confirm commands, sends the badge commands, then returns focus to this window.",
 )
@@ -180,6 +183,18 @@ def screen_fraction_geometry(
     width = max(1, int(screen_width * width_fraction))
     height = max(1, int(screen_height * height_fraction))
     return f"{width}x{height}"
+
+
+def popup_window_width(window_width, fraction=HELP_POPUP_WIDTH_FRACTION):
+    return max(1, int(window_width * fraction))
+
+
+def popup_wraplength(window_width, fraction=HELP_POPUP_WIDTH_FRACTION):
+    return max(1, popup_window_width(window_width, fraction) - POPUP_HORIZONTAL_PADDING)
+
+
+def empty_badge_counts():
+    return {badge: 0 for badge in BADGES}
 
 
 class WindowsClipboard:
@@ -438,8 +453,9 @@ class BadgeDataStore:
 
 
 class SilentPopup:
-    def __init__(self, parent, title, lines=None):
+    def __init__(self, parent, title, lines=None, wrap_source=None):
         self.parent = parent
+        self.wrap_source = wrap_source or parent
         self.window = tk.Toplevel(parent)
         self.window.title(title)
         self.window.transient(parent)
@@ -457,13 +473,27 @@ class SilentPopup:
             self.add_line(line)
 
     def add_line(self, text):
-        ttk.Label(self.frame, text=text, wraplength=460, justify="left").grid(
+        ttk.Label(self.frame, text=text, wraplength=self._wraplength(), justify="left").grid(
             row=self._row,
             column=0,
             sticky="w",
             pady=(0, 4),
         )
         self._row += 1
+
+    def _wraplength(self):
+        return popup_wraplength(self._source_width())
+
+    def _target_width(self):
+        return popup_window_width(self._source_width())
+
+    def _source_width(self):
+        try:
+            self.wrap_source.update_idletasks()
+            width = self.wrap_source.winfo_width()
+        except tk.TclError:
+            width = 1
+        return width
 
     def add_help_line_with_user_id_link(self, command):
         row_frame = ttk.Frame(self.frame)
@@ -499,11 +529,11 @@ class SilentPopup:
         parent_y = self.parent.winfo_rooty()
         parent_width = self.parent.winfo_width()
         parent_height = self.parent.winfo_height()
-        width = self.window.winfo_width()
+        width = self._target_width()
         height = self.window.winfo_height()
         x = parent_x + max(0, int((parent_width - width) / 2))
         y = parent_y + max(0, int((parent_height - height) / 2))
-        self.window.geometry(f"+{x}+{y}")
+        self.window.geometry(f"{width}x{height}+{x}+{y}")
 
     def close(self):
         self.window.grab_release()
@@ -737,6 +767,13 @@ class KakeraSetterApp:
         ttk.Entry(config_frame, textvariable=self.config_name_var).grid(row=0, column=1, sticky="ew", pady=4)
         ttk.Button(config_frame, text="Save / Update", command=self.save_current_config).grid(
             row=0,
+            column=3,
+            sticky="e",
+            padx=(8, 0),
+            pady=4,
+        )
+        ttk.Button(config_frame, text="New", command=self.start_new_config).grid(
+            row=0,
             column=2,
             sticky="e",
             padx=(8, 0),
@@ -744,7 +781,7 @@ class KakeraSetterApp:
         )
         ttk.Button(config_frame, text="Delete", command=self.delete_current_config).grid(
             row=0,
-            column=3,
+            column=4,
             sticky="e",
             padx=(8, 0),
             pady=4,
@@ -882,6 +919,14 @@ class KakeraSetterApp:
         self.status_var.set(f"Saved configuration: {name}")
         self._refresh_config_list()
 
+    def start_new_config(self):
+        self.config_name_var.set("")
+        self.config_list.selection_clear(0, tk.END)
+        for badge, count in empty_badge_counts().items():
+            self.badge_vars[badge].set(str(count))
+        self.status_var.set("New configuration")
+        self._update_badge_ui_state()
+
     def _selected_config_name(self):
         selection = self.config_list.curselection()
         if selection:
@@ -916,7 +961,7 @@ class KakeraSetterApp:
         self.status_var.set(f"Loaded configuration: {name}")
 
     def show_help(self):
-        popup = SilentPopup(self.root, f"{APP_TITLE} Help")
+        popup = SilentPopup(self.root, f"{APP_TITLE} Help", wrap_source=self.root)
         for line in HELP_LINES:
             if line == "2. Enter your discord userID.":
                 popup.add_help_line_with_user_id_link(lambda: self.show_user_id_help(popup.window))
@@ -943,7 +988,7 @@ class KakeraSetterApp:
         )
 
     def show_popup(self, title, message, parent=None):
-        SilentPopup(parent or self.root, title, message.splitlines()).show()
+        SilentPopup(parent or self.root, title, message.splitlines(), wrap_source=self.root).show()
 
     def _current_settings(self):
         return {

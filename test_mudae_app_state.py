@@ -8,13 +8,18 @@ from mudae_badge_setter import (
     CONFIG_FILENAME,
     ConfigStore,
     HELP_LINES,
+    POPUP_HORIZONTAL_PADDING,
+    HELP_POPUP_WIDTH_FRACTION,
     SETTINGS_FILENAME,
     SettingsStore,
     USER_ID_HELP_TEXT,
     app_base_dir,
     app_data_dir,
     cleanup_obsolete_runtime_files,
+    empty_badge_counts,
     migrate_runtime_file,
+    popup_window_width,
+    popup_wraplength,
     runtime_file_path,
     screen_fraction_geometry,
 )
@@ -64,6 +69,20 @@ class AppPersistenceTests(unittest.TestCase):
         self.assertEqual(loaded["main"]["badges"]["bronze"], 2)
         self.assertEqual(loaded["main"]["badges"]["diamond"], 4)
 
+    def test_empty_badge_counts_returns_all_zeroes(self):
+        self.assertEqual(
+            empty_badge_counts(),
+            {
+                "bronze": 0,
+                "silver": 0,
+                "gold": 0,
+                "sapphire": 0,
+                "ruby": 0,
+                "emerald": 0,
+                "diamond": 0,
+            },
+        )
+
     def test_badge_data_store_creates_default_runtime_file(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / BADGE_DATA_FILENAME
@@ -103,6 +122,12 @@ class AppPersistenceTests(unittest.TestCase):
 
     def test_screen_fraction_geometry_uses_35_percent_width_and_40_percent_height(self):
         self.assertEqual(screen_fraction_geometry(2560, 1440), "896x576")
+
+    def test_popup_window_width_uses_30_percent_of_window_width(self):
+        self.assertEqual(popup_window_width(900), int(900 * HELP_POPUP_WIDTH_FRACTION))
+
+    def test_popup_wraplength_fits_inside_popup_padding(self):
+        self.assertEqual(popup_wraplength(900), popup_window_width(900) - POPUP_HORIZONTAL_PADDING)
 
     def test_app_base_dir_uses_exe_folder_when_frozen(self):
         base_dir = app_base_dir(
