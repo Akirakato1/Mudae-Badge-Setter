@@ -5,7 +5,7 @@ import time
 import tkinter as tk
 from ctypes import wintypes
 from pathlib import Path
-from tkinter import messagebox, ttk
+from tkinter import ttk
 
 from mudae_logic import (
     BADGES,
@@ -22,17 +22,25 @@ from mudae_logic import (
 CONFIG_PATH = Path(__file__).with_name("mudae_kakera_configs.json")
 STATE_PATH = Path(__file__).with_name("mudae_kakera_last_state.json")
 APP_TITLE = "Mudae Kakera Setter"
-HELP_TEXT = """How to use this app:
+HELP_LINES = (
+    "How to use this app:",
+    "",
+    "1. Open Discord desktop to the text channel where Mudae should receive commands.",
+    "2. Enter your discord userID.",
+    "3. Set the Message delay. Use a larger value if Discord misses messages.",
+    "4. Set badge counts from 0 to 4.",
+    "5. Enter a configuration name and click Save / Update to save the current settings.",
+    "6. Click a saved configuration to load it into the fields.",
+    "7. Click Set to run the sequence.",
+    "",
+    "When Set runs, the app briefly focuses Discord, clicks the current channel message box, sends the refund/confirm commands, sends the badge commands, then returns focus to this window.",
+)
+USER_ID_HELP_TEXT = """How to get your Discord user ID:
 
-1. Open Discord desktop to the text channel where Mudae should receive commands.
-2. Enter only the numeric Discord user ID, not <@...>.
-3. Set the Message delay. Use a larger value if Discord misses messages.
-4. Set badge counts from 0 to 4.
-5. Enter a configuration name and click Save / Update to save the current settings.
-6. Click a saved configuration to load it into the fields.
-7. Click Set to run the sequence.
-
-When Set runs, the app briefly focuses Discord, clicks the current channel message box, sends the refund/confirm commands, sends the badge commands, then returns focus to this window."""
+- Click the gear icon (Settings) in the bottom left corner next to your username.
+- Scroll down to the App Settings section and click Advanced.
+- Toggle the Developer Mode switch to the ON position.
+- Desktop: Click your profile picture at the bottom left, click the three dots (...), and choose Copy ID."""
 
 
 class WindowsClipboard:
@@ -267,6 +275,79 @@ class ConfigStore:
             json.dump(normalized, file, indent=2, sort_keys=True)
 
 
+class SilentPopup:
+    def __init__(self, parent, title, lines=None):
+        self.parent = parent
+        self.window = tk.Toplevel(parent)
+        self.window.title(title)
+        self.window.transient(parent)
+        self.window.resizable(False, False)
+        self.window.protocol("WM_DELETE_WINDOW", self.close)
+        self.frame = ttk.Frame(self.window, padding=16)
+        self.frame.grid(row=0, column=0, sticky="nsew")
+        self.frame.columnconfigure(0, weight=1)
+        self._row = 0
+        if lines:
+            self.add_lines(lines)
+
+    def add_lines(self, lines):
+        for line in lines:
+            self.add_line(line)
+
+    def add_line(self, text):
+        ttk.Label(self.frame, text=text, wraplength=460, justify="left").grid(
+            row=self._row,
+            column=0,
+            sticky="w",
+            pady=(0, 4),
+        )
+        self._row += 1
+
+    def add_help_line_with_user_id_link(self, command):
+        row_frame = ttk.Frame(self.frame)
+        row_frame.grid(row=self._row, column=0, sticky="w", pady=(0, 4))
+        ttk.Label(row_frame, text="2. Enter your discord ").grid(row=0, column=0, sticky="w")
+        link = tk.Label(
+            row_frame,
+            text="userID",
+            fg="#0645ad",
+            cursor="hand2",
+            font=("TkDefaultFont", 9, "underline"),
+        )
+        link.grid(row=0, column=1, sticky="w")
+        link.bind("<Button-1>", lambda _event: command())
+        ttk.Label(row_frame, text=".").grid(row=0, column=2, sticky="w")
+        self._row += 1
+
+    def add_button_row(self):
+        button_frame = ttk.Frame(self.frame)
+        button_frame.grid(row=self._row, column=0, sticky="e", pady=(10, 0))
+        ttk.Button(button_frame, text="OK", command=self.close).grid(row=0, column=0)
+        self._row += 1
+
+    def show(self):
+        self.add_button_row()
+        self.window.update_idletasks()
+        self._center()
+        self.window.grab_set()
+        self.window.focus_force()
+
+    def _center(self):
+        parent_x = self.parent.winfo_rootx()
+        parent_y = self.parent.winfo_rooty()
+        parent_width = self.parent.winfo_width()
+        parent_height = self.parent.winfo_height()
+        width = self.window.winfo_width()
+        height = self.window.winfo_height()
+        x = parent_x + max(0, int((parent_width - width) / 2))
+        y = parent_y + max(0, int((parent_height - height) / 2))
+        self.window.geometry(f"+{x}+{y}")
+
+    def close(self):
+        self.window.grab_release()
+        self.window.destroy()
+
+
 class AppStateStore:
     def __init__(self, path):
         self.path = path
@@ -419,14 +500,14 @@ class KakeraSetterApp:
     def save_current_config(self):
         name = self.config_name_var.get().strip()
         if not name:
-            messagebox.showerror(APP_TITLE, "Enter a configuration name before saving.")
+            self.show_popup(APP_TITLE, "Enter a configuration name before saving.")
             return
         self.configs[name] = self._current_config()
         try:
             self.store.save(self.configs)
             self.save_last_state()
         except OSError as exc:
-            messagebox.showerror(APP_TITLE, f"Could not save configuration: {exc}")
+            self.show_popup(APP_TITLE, f"Could not save configuration: {exc}")
             return
         self.status_var.set(f"Saved configuration: {name}")
         self._refresh_config_list()
@@ -440,7 +521,19 @@ class KakeraSetterApp:
         self.status_var.set(f"Loaded configuration: {name}")
 
     def show_help(self):
-        messagebox.showinfo(f"{APP_TITLE} Help", HELP_TEXT)
+        popup = SilentPopup(self.root, f"{APP_TITLE} Help")
+        for line in HELP_LINES:
+            if line == "2. Enter your discord userID.":
+                popup.add_help_line_with_user_id_link(lambda: self.show_user_id_help(popup.window))
+            else:
+                popup.add_line(line)
+        popup.show()
+
+    def show_user_id_help(self, parent=None):
+        self.show_popup(f"{APP_TITLE} - Discord userID", USER_ID_HELP_TEXT, parent=parent)
+
+    def show_popup(self, title, message, parent=None):
+        SilentPopup(parent or self.root, title, message.splitlines()).show()
 
     def _last_state(self):
         state = self._current_config()
@@ -467,7 +560,7 @@ class KakeraSetterApp:
             delay = validate_delay(self.delay_var.get())
             commands = build_command_sequence(user_id, self._current_badge_counts())
         except ValueError as exc:
-            messagebox.showerror(APP_TITLE, str(exc))
+            self.show_popup(APP_TITLE, str(exc))
             return
 
         self.set_button.configure(state=tk.DISABLED)
@@ -501,7 +594,7 @@ class KakeraSetterApp:
         self.set_button.configure(state=tk.NORMAL)
         if error:
             self.status_var.set("Send failed")
-            messagebox.showerror(APP_TITLE, error)
+            self.show_popup(APP_TITLE, error)
             return
         try:
             self.save_last_state()
@@ -514,7 +607,7 @@ class KakeraSetterApp:
         )
         result_message = format_set_result_message(result_name, self._current_badge_counts())
         self.status_var.set(result_message)
-        messagebox.showinfo(APP_TITLE, result_message)
+        self.show_popup(APP_TITLE, result_message)
 
 
 def main():

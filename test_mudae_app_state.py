@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from mudae_kakera_setter import AppStateStore, HELP_TEXT
+from mudae_kakera_setter import AppStateStore, HELP_LINES, USER_ID_HELP_TEXT
 
 
 class AppStateStoreTests(unittest.TestCase):
@@ -28,10 +28,17 @@ class AppStateStoreTests(unittest.TestCase):
         self.assertEqual(loaded["badges"]["diamond"], 4)
 
     def test_help_text_explains_core_workflow(self):
-        self.assertIn("Open Discord", HELP_TEXT)
-        self.assertIn("numeric Discord user ID", HELP_TEXT)
-        self.assertIn("Message delay", HELP_TEXT)
-        self.assertIn("Set", HELP_TEXT)
+        help_text = "\n".join(HELP_LINES)
+        self.assertIn("Open Discord", help_text)
+        self.assertIn("Enter your discord userID.", help_text)
+        self.assertIn("Message delay", help_text)
+        self.assertIn("Set", help_text)
+
+    def test_user_id_help_text_explains_copy_id_steps(self):
+        self.assertIn("gear icon", USER_ID_HELP_TEXT)
+        self.assertIn("Advanced", USER_ID_HELP_TEXT)
+        self.assertIn("Developer Mode", USER_ID_HELP_TEXT)
+        self.assertIn("Copy ID", USER_ID_HELP_TEXT)
 
 
 if __name__ == "__main__":
