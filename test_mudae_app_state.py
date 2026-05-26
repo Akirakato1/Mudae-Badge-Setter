@@ -2,7 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from mudae_kakera_setter import (
+from mudae_badge_setter import (
     AppStateStore,
     HELP_LINES,
     USER_ID_HELP_TEXT,
@@ -56,7 +56,7 @@ class AppStateStoreTests(unittest.TestCase):
         base_dir = app_base_dir(
             is_frozen=True,
             executable=r"C:\Tools\Mudae Badge Setter.exe",
-            source_file=r"C:\Temp\_MEI12345\mudae_kakera_setter.py",
+            source_file=r"C:\Temp\_MEI12345\mudae_badge_setter.py",
         )
 
         self.assertEqual(base_dir, Path(r"C:\Tools"))

@@ -7,13 +7,13 @@ A small Windows Python UI for saving Mudae kakera badge configurations and sendi
 On this machine, use the Windows Python launcher because the default Anaconda `python` cannot start `tkinter`:
 
 ```powershell
-py -3.7 mudae_kakera_setter.py
+py -3.7 mudae_badge_setter.py
 ```
 
 If your normal Python has a working `tkinter`, this also works:
 
 ```powershell
-python mudae_kakera_setter.py
+python mudae_badge_setter.py
 ```
 
 ## Use
