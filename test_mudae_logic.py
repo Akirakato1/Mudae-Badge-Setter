@@ -3,12 +3,17 @@ import unittest
 from mudae_logic import (
     BADGES,
     DEFAULT_DELAY,
+    badge_info_lines,
+    badge_prerequisite_status,
     build_command_sequence,
+    configuration_prerequisite_errors,
     default_configurations,
     find_matching_config_name,
     format_set_result_message,
+    next_level_kakera_cost,
     seed_default_configurations,
     normalize_config,
+    total_kakera_cost,
     validate_delay,
     validate_user_id,
 )
@@ -18,7 +23,7 @@ class MudaeLogicTests(unittest.TestCase):
     def test_build_command_sequence_formats_refund_and_sends_badge_counts(self):
         counts = {badge: 0 for badge in BADGES}
         counts["bronze"] = 2
-        counts["diamond"] = 1
+        counts["silver"] = 1
 
         commands = build_command_sequence("718568383347556424", counts)
 
@@ -29,18 +34,17 @@ class MudaeLogicTests(unittest.TestCase):
                 "confirm",
                 "$bronze 2",
                 "y",
-                "$diamond 1",
+                "$silver 1",
                 "y",
             ],
         )
 
     def test_build_command_sequence_sends_ruby_four_after_prerequisites(self):
         counts = {badge: 0 for badge in BADGES}
-        counts["bronze"] = 2
+        counts["bronze"] = 4
         counts["silver"] = 2
         counts["gold"] = 2
         counts["ruby"] = 4
-        counts["diamond"] = 1
 
         commands = build_command_sequence("718568383347556424", counts)
 
@@ -57,7 +61,7 @@ class MudaeLogicTests(unittest.TestCase):
                 "y",
                 "$ruby 4",
                 "y",
-                "$diamond 1",
+                "$bronze 2",
                 "y",
             ],
         )
@@ -107,6 +111,55 @@ class MudaeLogicTests(unittest.TestCase):
 
         self.assertEqual(seed_default_configurations(custom), custom)
         self.assertEqual(set(seed_default_configurations({})), set(default_configurations()))
+
+    def test_total_kakera_cost_splits_prerequisite_and_discounted_levels(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 4, "silver": 2, "gold": 2, "ruby": 4})
+
+        self.assertEqual(total_kakera_cost(counts), 93250)
+
+    def test_next_level_kakera_cost_uses_ruby_discount_when_active_in_plan(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 2, "silver": 2, "gold": 2, "ruby": 4})
+
+        next_cost = next_level_kakera_cost(counts, "bronze")
+
+        self.assertEqual(next_cost["level"], 3)
+        self.assertEqual(next_cost["base_cost"], 3000)
+        self.assertEqual(next_cost["cost"], 2250)
+        self.assertTrue(next_cost["discounted"])
+
+    def test_badge_prerequisite_status_reports_locked_badges(self):
+        counts = {badge: 0 for badge in BADGES}
+
+        self.assertFalse(badge_prerequisite_status("ruby", counts)["unlocked"])
+        self.assertFalse(badge_prerequisite_status("emerald", counts)["unlocked"])
+
+        counts.update({"bronze": 2, "silver": 2, "gold": 2})
+        self.assertTrue(badge_prerequisite_status("ruby", counts)["unlocked"])
+        self.assertTrue(badge_prerequisite_status("sapphire", counts)["unlocked"])
+
+        counts.update({"bronze": 4, "silver": 4, "gold": 0})
+        self.assertTrue(badge_prerequisite_status("emerald", counts)["unlocked"])
+        self.assertTrue(badge_prerequisite_status("diamond", counts)["unlocked"])
+
+    def test_configuration_prerequisite_errors_rejects_locked_badges(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts["ruby"] = 4
+
+        errors = configuration_prerequisite_errors(counts)
+
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Ruby", errors[0])
+
+    def test_badge_info_lines_include_costs_and_prerequisites(self):
+        lines = badge_info_lines("ruby")
+        text = "\n".join(lines)
+
+        self.assertIn("Ruby", lines[0])
+        self.assertIn("Level IV: 28,000", text)
+        self.assertIn("Bronze II", text)
+        self.assertIn("25% discount", text)
 
     def test_validate_user_id_accepts_digits_only(self):
         self.assertEqual(validate_user_id(" 718568383347556424 "), "718568383347556424")

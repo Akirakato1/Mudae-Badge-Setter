@@ -226,6 +226,78 @@ def seed_default_configurations(configs, badge_data=None):
     return default_configurations(badge_data)
 
 
+def format_kakera(value):
+    return f"{int(value):,}"
+
+
+def badge_level_cost(badge, level, badge_data=None):
+    badge_data = badge_data or load_badge_data()
+    costs = badge_data.get("badges", {}).get(badge, {}).get("costs", {})
+    return int(costs.get(str(level), 0))
+
+
+def ruby_discount_percent(badge_data=None):
+    badge_data = badge_data or load_badge_data()
+    discount = badge_data.get("badges", {}).get("ruby", {}).get("discount", {})
+    if discount.get("level") == 4:
+        return int(discount.get("percent", 0))
+    return 0
+
+
+def discounted_kakera_cost(base_cost, discount_percent):
+    return int(base_cost * (100 - discount_percent) / 100)
+
+
+def level_four_badge_count(raw_counts, exclude=()):
+    badge_counts = normalize_badge_counts(raw_counts)
+    excluded = set(exclude)
+    return sum(1 for badge in BADGES if badge not in excluded and badge_counts[badge] >= 4)
+
+
+def prerequisite_text(badge):
+    if badge in BASIC_UNLOCK_BADGES:
+        return "None"
+    if badge in LEVEL_FOUR_UNLOCK_BADGES:
+        return "Bronze II, Silver II, and Gold II; or any two other Level IV badges."
+    if badge in TWO_LEVEL_FOUR_UNLOCK_BADGES:
+        return "Any two other Level IV badges."
+    return "None"
+
+
+def badge_prerequisite_status(badge, raw_counts):
+    badge = str(badge).lower()
+    badge_counts = normalize_badge_counts(raw_counts)
+    if badge not in BADGES:
+        return {"unlocked": False, "reason": "Unknown badge."}
+    if badge in BASIC_UNLOCK_BADGES:
+        return {"unlocked": True, "reason": "No prerequisites."}
+    if badge in LEVEL_FOUR_UNLOCK_BADGES:
+        basic_unlock = all(badge_counts[required] >= 2 for required in BASIC_UNLOCK_BADGES)
+        level_four_unlock = level_four_badge_count(badge_counts, exclude=(badge,)) >= 2
+        if basic_unlock or level_four_unlock:
+            return {"unlocked": True, "reason": "Prerequisites met."}
+        return {
+            "unlocked": False,
+            "reason": "Requires Bronze II, Silver II, and Gold II, or any two other Level IV badges.",
+        }
+    if badge in TWO_LEVEL_FOUR_UNLOCK_BADGES:
+        if level_four_badge_count(badge_counts, exclude=(badge,)) >= 2:
+            return {"unlocked": True, "reason": "Prerequisites met."}
+        return {"unlocked": False, "reason": "Requires any two other Level IV badges."}
+    return {"unlocked": True, "reason": "No prerequisites."}
+
+
+def configuration_prerequisite_errors(raw_counts):
+    badge_counts = normalize_badge_counts(raw_counts)
+    errors = []
+    for badge in BADGES:
+        if badge_counts[badge] > 0:
+            status = badge_prerequisite_status(badge, badge_counts)
+            if not status["unlocked"]:
+                errors.append(f"{badge.title()} is locked. {status['reason']}")
+    return errors
+
+
 def command_purchase_steps(badge_counts):
     badge_counts = normalize_badge_counts(badge_counts)
     owned = {badge: 0 for badge in BADGES}
@@ -286,9 +358,98 @@ def command_purchase_steps(badge_counts):
     return steps
 
 
+def purchase_level_items(raw_counts, badge_data=None):
+    badge_counts = normalize_badge_counts(raw_counts)
+    errors = configuration_prerequisite_errors(badge_counts)
+    if errors:
+        raise ValueError("; ".join(errors))
+    badge_data = badge_data or load_badge_data()
+    discount_percent = ruby_discount_percent(badge_data)
+    owned = {badge: 0 for badge in BADGES}
+    ruby_discount_active = False
+    items = []
+    for badge, amount in command_purchase_steps(badge_counts):
+        for _ in range(amount):
+            level = owned[badge] + 1
+            base_cost = badge_level_cost(badge, level, badge_data)
+            discounted = ruby_discount_active and badge != "ruby"
+            cost = discounted_kakera_cost(base_cost, discount_percent) if discounted else base_cost
+            items.append(
+                {
+                    "badge": badge,
+                    "level": level,
+                    "base_cost": base_cost,
+                    "cost": cost,
+                    "discounted": discounted,
+                }
+            )
+            owned[badge] = level
+            if badge == "ruby" and level == 4:
+                ruby_discount_active = True
+    return items
+
+
+def total_kakera_cost(raw_counts, badge_data=None):
+    return sum(item["cost"] for item in purchase_level_items(raw_counts, badge_data))
+
+
+def next_level_kakera_cost(raw_counts, badge, badge_data=None):
+    badge = str(badge).lower()
+    if badge not in BADGES:
+        return {"state": "locked", "reason": "Unknown badge."}
+    badge_counts = normalize_badge_counts(raw_counts)
+    current_level = badge_counts[badge]
+    if current_level >= 4:
+        return {"state": "max", "level": 4}
+    if not badge_prerequisite_status(badge, badge_counts)["unlocked"]:
+        return {
+            "state": "locked",
+            "level": current_level + 1,
+            "reason": badge_prerequisite_status(badge, badge_counts)["reason"],
+        }
+    target_counts = dict(badge_counts)
+    target_counts[badge] = current_level + 1
+    try:
+        items = purchase_level_items(target_counts, badge_data)
+    except ValueError as exc:
+        return {"state": "locked", "level": current_level + 1, "reason": str(exc)}
+    for item in items:
+        if item["badge"] == badge and item["level"] == current_level + 1:
+            result = dict(item)
+            result["state"] = "cost"
+            return result
+    return {"state": "locked", "level": current_level + 1, "reason": "Could not price next level."}
+
+
+def badge_info_lines(badge, badge_data=None):
+    badge = str(badge).lower()
+    badge_data = badge_data or load_badge_data()
+    badge_info = badge_data.get("badges", {}).get(badge, {})
+    lines = [f"{badge.title()} Badge", ""]
+    lines.append(f"Prerequisites: {prerequisite_text(badge)}")
+    lines.append("")
+    lines.append("Costs:")
+    for level, numeral in ((1, "I"), (2, "II"), (3, "III"), (4, "IV")):
+        lines.append(f"Level {numeral}: {format_kakera(badge_level_cost(badge, level, badge_data))}")
+    perks = badge_info.get("perks", {})
+    if perks:
+        lines.append("")
+        lines.append("Perks:")
+        for text in perks.values():
+            lines.append(text)
+    discount = badge_info.get("discount")
+    if discount:
+        lines.append("")
+        lines.append(f"Ruby IV discount: {discount.get('percent', 0)}% discount on other badges after Ruby IV is purchased.")
+    return lines
+
+
 def build_command_sequence(raw_user_id, raw_badge_counts):
     user_id = validate_user_id(raw_user_id)
     badge_counts = normalize_badge_counts(raw_badge_counts)
+    errors = configuration_prerequisite_errors(badge_counts)
+    if errors:
+        raise ValueError("; ".join(errors))
     commands = [f"$kakerarefund <@{user_id}>", "confirm"]
     for badge, count in command_purchase_steps(badge_counts):
         commands.extend([f"${badge} {count}", "y"])

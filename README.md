@@ -23,11 +23,13 @@ python mudae_badge_setter.py
 3. Enter your discord userID, for example `718568383347556424`.
 4. Set the message delay. The default is `0.8` seconds.
 5. Set each badge count from `0` to `4`.
-6. Optionally enter a configuration name and click `Save / Update` to save the current badge counts.
-7. Click `Delete` to remove the selected or named configuration.
-8. Click `Set`.
+6. Check the live total cost and the next-level cost shown under each badge.
+7. Optionally enter a configuration name and click `Save / Update` to save the current badge counts.
+8. Click `Delete` to remove the selected or named configuration.
+9. Click `Set`.
 
 Click the `?` button in the lower-left corner of the app to show these usage notes inside the app. In that help popup, click `userID` to see how to find and copy your Discord ID.
+Click a badge name to show its costs, prerequisites, and perks.
 
 The app sends:
 
@@ -38,6 +40,7 @@ confirm
 
 Then it sends one `$<badge> <count>` command plus `y` for each selected badge count above `0`, such as `$bronze 3` then `y`.
 If ruby is set to `4`, the app sends its prerequisites first, then `$ruby 4`, then the remaining badge commands.
+The total cost display uses that same order, so prerequisite levels bought before Ruby IV are full price and later eligible levels get Ruby IV's 25% discount.
 
 ## Focus Behavior
 
@@ -56,5 +59,7 @@ Clicking a saved configuration loads only its badge counts into the UI. Saving a
 The app keeps permanent user ID and delay settings in `%APPDATA%\Mudae Badge Setter\settings.json`. This file stores only `user_id` and `delay`. Those fields are restored automatically the next time you open the app; the previous badge configuration is not auto-loaded.
 
 Badge costs, prerequisites, perks, and built-in default definitions are kept in `badge_data.json`.
+
+Badge inputs are locked until their prerequisites are met. Bronze, Silver, and Gold are always available. Ruby and Sapphire unlock with Bronze II, Silver II, and Gold II, or any two other Level IV badges. Emerald and Diamond unlock with any two other Level IV badges.
 
 After a successful run, the popup says `Set to <configuration name>` when the current badge counts match a saved configuration. If they do not match a saved configuration, it uses the badge-count sequence instead, such as `Set to 3420000` for bronze 3, silver 4, gold 2, and the remaining badges 0.
