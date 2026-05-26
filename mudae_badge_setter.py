@@ -23,6 +23,10 @@ from mudae_logic import (
 
 
 APP_DATA_FOLDER = "Mudae Badge Setter"
+CONFIG_FILENAME = "configs.json"
+SETTINGS_FILENAME = "settings.json"
+LEGACY_CONFIG_FILENAME = "mudae_kakera_configs.json"
+LEGACY_SETTINGS_FILENAME = "mudae_kakera_last_state.json"
 
 
 def app_base_dir(is_frozen=None, executable=None, source_file=None):
@@ -66,13 +70,42 @@ def migrate_runtime_file(target_path, legacy_paths):
     return False
 
 
+def cleanup_obsolete_runtime_files(paths):
+    removed = 0
+    for path in paths:
+        path = Path(path)
+        try:
+            if path.exists():
+                path.unlink()
+                removed += 1
+        except OSError:
+            pass
+    return removed
+
+
 def migrate_runtime_files():
-    migrate_runtime_file(CONFIG_PATH, legacy_runtime_file_paths("mudae_kakera_configs.json"))
-    migrate_runtime_file(SETTINGS_PATH, legacy_runtime_file_paths("mudae_kakera_last_state.json"))
+    migrate_runtime_file(
+        CONFIG_PATH,
+        [runtime_file_path(LEGACY_CONFIG_FILENAME)]
+        + legacy_runtime_file_paths(CONFIG_FILENAME)
+        + legacy_runtime_file_paths(LEGACY_CONFIG_FILENAME),
+    )
+    migrate_runtime_file(
+        SETTINGS_PATH,
+        [runtime_file_path(LEGACY_SETTINGS_FILENAME)]
+        + legacy_runtime_file_paths(SETTINGS_FILENAME)
+        + legacy_runtime_file_paths(LEGACY_SETTINGS_FILENAME),
+    )
+    cleanup_obsolete_runtime_files(
+        [
+            runtime_file_path(LEGACY_CONFIG_FILENAME),
+            runtime_file_path(LEGACY_SETTINGS_FILENAME),
+        ]
+    )
 
 
-CONFIG_PATH = runtime_file_path("mudae_kakera_configs.json")
-SETTINGS_PATH = runtime_file_path("mudae_kakera_last_state.json")
+CONFIG_PATH = runtime_file_path(CONFIG_FILENAME)
+SETTINGS_PATH = runtime_file_path(SETTINGS_FILENAME)
 APP_TITLE = "Mudae Badge Setter"
 POINTS_PER_INCH = 72.0
 WINDOW_SCREEN_FRACTION = 0.30

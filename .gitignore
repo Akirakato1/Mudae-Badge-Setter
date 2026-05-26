@@ -1,5 +1,7 @@
 __pycache__/
 *.py[cod]
+configs.json
+settings.json
 mudae_kakera_configs.json
 mudae_kakera_last_state.json
 build/

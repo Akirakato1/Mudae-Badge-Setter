@@ -3,12 +3,15 @@ import unittest
 from pathlib import Path
 
 from mudae_badge_setter import (
+    CONFIG_FILENAME,
     ConfigStore,
     HELP_LINES,
+    SETTINGS_FILENAME,
     SettingsStore,
     USER_ID_HELP_TEXT,
     app_base_dir,
     app_data_dir,
+    cleanup_obsolete_runtime_files,
     migrate_runtime_file,
     runtime_file_path,
     screen_fraction_geometry,
@@ -86,13 +89,24 @@ class AppPersistenceTests(unittest.TestCase):
 
     def test_runtime_file_path_uses_appdata_folder(self):
         path = runtime_file_path(
-            "mudae_kakera_configs.json",
+            CONFIG_FILENAME,
             appdata=r"C:\Users\Test\AppData\Roaming",
         )
 
         self.assertEqual(
             path,
-            Path(r"C:\Users\Test\AppData\Roaming\Mudae Badge Setter\mudae_kakera_configs.json"),
+            Path(r"C:\Users\Test\AppData\Roaming\Mudae Badge Setter\configs.json"),
+        )
+
+    def test_settings_filename_is_plain_settings_json(self):
+        path = runtime_file_path(
+            SETTINGS_FILENAME,
+            appdata=r"C:\Users\Test\AppData\Roaming",
+        )
+
+        self.assertEqual(
+            path,
+            Path(r"C:\Users\Test\AppData\Roaming\Mudae Badge Setter\settings.json"),
         )
 
     def test_app_data_dir_falls_back_when_appdata_is_missing(self):
@@ -126,6 +140,20 @@ class AppPersistenceTests(unittest.TestCase):
 
             self.assertFalse(migrated)
             self.assertEqual(target.read_text(encoding="utf-8"), '{"current": true}')
+
+    def test_cleanup_obsolete_runtime_files_removes_old_names(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            old_config = root / "mudae_kakera_configs.json"
+            old_settings = root / "mudae_kakera_last_state.json"
+            old_config.write_text("{}", encoding="utf-8")
+            old_settings.write_text("{}", encoding="utf-8")
+
+            removed = cleanup_obsolete_runtime_files([old_config, old_settings])
+
+            self.assertEqual(removed, 2)
+            self.assertFalse(old_config.exists())
+            self.assertFalse(old_settings.exists())
 
 
 if __name__ == "__main__":
