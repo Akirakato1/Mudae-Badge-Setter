@@ -21,7 +21,7 @@ from mudae_logic import (
 
 CONFIG_PATH = Path(__file__).with_name("mudae_kakera_configs.json")
 STATE_PATH = Path(__file__).with_name("mudae_kakera_last_state.json")
-APP_TITLE = "Mudae Kakera Setter"
+APP_TITLE = "Mudae Badge Setter"
 POINTS_PER_INCH = 72.0
 WINDOW_SCREEN_FRACTION = 0.30
 HELP_LINES = (

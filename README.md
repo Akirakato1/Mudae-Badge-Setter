@@ -1,4 +1,4 @@
-# Mudae Kakera Setter
+# Mudae Badge Setter
 
 A small Windows Python UI for saving Mudae kakera badge configurations and sending the matching commands through the open Discord desktop client.
 
