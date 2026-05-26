@@ -48,3 +48,5 @@ Saved configurations are written to `mudae_kakera_configs.json` next to the scri
 Clicking a saved configuration loads it into the UI. Saving again with the same name updates it.
 
 The app also remembers the last visible user ID, delay, badge counts, and selected configuration name in `mudae_kakera_last_state.json` when it closes. Those fields are restored automatically the next time you open the app.
+
+After a successful run, the popup says `Set to <configuration name>` when the current badge counts match a saved configuration. If they do not match a saved configuration, it uses the badge-count sequence instead, such as `Set to 3420000` for bronze 3, silver 4, gold 2, and the remaining badges 0.

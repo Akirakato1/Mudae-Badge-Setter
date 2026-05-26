@@ -11,6 +11,8 @@ from mudae_logic import (
     BADGES,
     DEFAULT_DELAY,
     build_command_sequence,
+    find_matching_config_name,
+    format_set_result_message,
     normalize_config,
     validate_delay,
     validate_user_id,
@@ -463,7 +465,7 @@ class KakeraSetterApp:
         except Exception as exc:
             self.root.after(0, lambda: self._finish_set_run(error=str(exc)))
             return
-        self.root.after(0, lambda: self._finish_set_run(sent_count=len(commands)))
+        self.root.after(0, self._finish_set_run)
 
     def _focus_app_window(self):
         self.root.deiconify()
@@ -474,7 +476,7 @@ class KakeraSetterApp:
         except Exception:
             pass
 
-    def _finish_set_run(self, sent_count=None, error=None):
+    def _finish_set_run(self, error=None):
         self._focus_app_window()
         self.set_button.configure(state=tk.NORMAL)
         if error:
@@ -485,8 +487,14 @@ class KakeraSetterApp:
             self.save_last_state()
         except OSError:
             pass
-        self.status_var.set(f"Sent {sent_count} messages")
-        messagebox.showinfo(APP_TITLE, f"Sent {sent_count} messages.")
+        result_name = find_matching_config_name(
+            self.config_name_var.get(),
+            self.configs,
+            self._current_badge_counts(),
+        )
+        result_message = format_set_result_message(result_name, self._current_badge_counts())
+        self.status_var.set(result_message)
+        messagebox.showinfo(APP_TITLE, result_message)
 
 
 def main():

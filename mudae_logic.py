@@ -41,6 +41,33 @@ def build_command_sequence(raw_user_id, raw_badge_counts):
     return commands
 
 
+def badge_count_sequence(raw_badge_counts):
+    badge_counts = normalize_badge_counts(raw_badge_counts)
+    return "".join(str(badge_counts[badge]) for badge in BADGES)
+
+
+def format_set_result_message(config_name, raw_badge_counts):
+    name = config_name.strip()
+    if name:
+        return f"Set to {name}"
+    return f"Set to {badge_count_sequence(raw_badge_counts)}"
+
+
+def find_matching_config_name(preferred_name, configs, raw_badge_counts):
+    configs = configs if isinstance(configs, dict) else {}
+    target_badges = normalize_badge_counts(raw_badge_counts)
+    preferred_name = preferred_name.strip()
+    if preferred_name in configs:
+        preferred_config = normalize_config(configs[preferred_name])
+        if preferred_config["badges"] == target_badges:
+            return preferred_name
+    for name in sorted(configs):
+        config = normalize_config(configs[name])
+        if config["badges"] == target_badges:
+            return str(name)
+    return ""
+
+
 def normalize_config(raw_config):
     raw_config = raw_config if isinstance(raw_config, dict) else {}
     raw_badges = raw_config.get("badges", {})
