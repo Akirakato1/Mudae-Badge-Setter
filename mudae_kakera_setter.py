@@ -18,6 +18,7 @@ from mudae_logic import (
 
 
 CONFIG_PATH = Path(__file__).with_name("mudae_kakera_configs.json")
+STATE_PATH = Path(__file__).with_name("mudae_kakera_last_state.json")
 APP_TITLE = "Mudae Kakera Setter"
 
 
@@ -253,6 +254,33 @@ class ConfigStore:
             json.dump(normalized, file, indent=2, sort_keys=True)
 
 
+class AppStateStore:
+    def __init__(self, path):
+        self.path = path
+
+    def load(self):
+        if not self.path.exists():
+            return self._normalize({})
+        try:
+            with self.path.open("r", encoding="utf-8") as file:
+                data = json.load(file)
+        except (OSError, json.JSONDecodeError):
+            return self._normalize({})
+        return self._normalize(data)
+
+    def save(self, state):
+        normalized = self._normalize(state)
+        with self.path.open("w", encoding="utf-8") as file:
+            json.dump(normalized, file, indent=2, sort_keys=True)
+
+    @staticmethod
+    def _normalize(state):
+        state = state if isinstance(state, dict) else {}
+        config = normalize_config(state)
+        config["config_name"] = str(state.get("config_name", "")).strip()
+        return config
+
+
 class KakeraSetterApp:
     def __init__(self, root):
         self.root = root
@@ -261,6 +289,7 @@ class KakeraSetterApp:
         self.root.minsize(480, 460)
 
         self.store = ConfigStore(CONFIG_PATH)
+        self.state_store = AppStateStore(STATE_PATH)
         self.configs = self.store.load()
         self.badge_vars = {}
 
@@ -270,7 +299,9 @@ class KakeraSetterApp:
         self.status_var = tk.StringVar(value="Ready")
 
         self._build_ui()
+        self._load_last_state()
         self._refresh_config_list()
+        self.root.protocol("WM_DELETE_WINDOW", self.close)
 
     def _build_ui(self):
         main = ttk.Frame(self.root, padding=14)
@@ -374,6 +405,7 @@ class KakeraSetterApp:
         self.configs[name] = self._current_config()
         try:
             self.store.save(self.configs)
+            self.save_last_state()
         except OSError as exc:
             messagebox.showerror(APP_TITLE, f"Could not save configuration: {exc}")
             return
@@ -387,6 +419,25 @@ class KakeraSetterApp:
         name = self.config_list.get(selection[0])
         self._apply_config(name, self.configs[name])
         self.status_var.set(f"Loaded configuration: {name}")
+
+    def _last_state(self):
+        state = self._current_config()
+        state["config_name"] = self.config_name_var.get().strip()
+        return state
+
+    def _load_last_state(self):
+        state = self.state_store.load()
+        self._apply_config(state["config_name"], state)
+
+    def save_last_state(self):
+        self.state_store.save(self._last_state())
+
+    def close(self):
+        try:
+            self.save_last_state()
+        except OSError:
+            pass
+        self.root.destroy()
 
     def start_set_run(self):
         try:
@@ -430,6 +481,10 @@ class KakeraSetterApp:
             self.status_var.set("Send failed")
             messagebox.showerror(APP_TITLE, error)
             return
+        try:
+            self.save_last_state()
+        except OSError:
+            pass
         self.status_var.set(f"Sent {sent_count} messages")
         messagebox.showinfo(APP_TITLE, f"Sent {sent_count} messages.")
 

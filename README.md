@@ -46,3 +46,5 @@ If Discord misses messages, increase the message delay.
 Saved configurations are written to `mudae_kakera_configs.json` next to the script. That file is ignored by git so your local presets stay local.
 
 Clicking a saved configuration loads it into the UI. Saving again with the same name updates it.
+
+The app also remembers the last visible user ID, delay, badge counts, and selected configuration name in `mudae_kakera_last_state.json` when it closes. Those fields are restored automatically the next time you open the app.
