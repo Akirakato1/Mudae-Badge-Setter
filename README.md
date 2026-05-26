@@ -1,0 +1,48 @@
+# Mudae Kakera Setter
+
+A small Windows Python UI for saving Mudae kakera badge configurations and sending the matching commands through the open Discord desktop client.
+
+## Run
+
+On this machine, use the Windows Python launcher because the default Anaconda `python` cannot start `tkinter`:
+
+```powershell
+py -3.7 mudae_kakera_setter.py
+```
+
+If your normal Python has a working `tkinter`, this also works:
+
+```powershell
+python mudae_kakera_setter.py
+```
+
+## Use
+
+1. Open Discord desktop to the text channel where you want to interact with Mudae.
+2. Run the app.
+3. Enter only the numeric Discord user ID, for example `718568383347556424`.
+4. Set the message delay. The default is `0.8` seconds.
+5. Set each badge count from `0` to `4`.
+6. Optionally enter a configuration name and click `Save / Update`.
+7. Click `Set`.
+
+The app sends:
+
+```text
+$kakerarefund <@user_id>
+confirm
+```
+
+Then it sends `$bronze`/`y`, `$silver`/`y`, `$gold`/`y`, `$sapphire`/`y`, `$ruby`/`y`, `$emerald`/`y`, and `$diamond`/`y` according to the counts you selected.
+
+## Focus Behavior
+
+When you click `Set`, the app briefly focuses Discord, clicks near the lower center of the Discord window to focus the current channel message box, pastes each command, presses Enter, then returns focus to the app.
+
+If Discord misses messages, increase the message delay.
+
+## Saved Configurations
+
+Saved configurations are written to `mudae_kakera_configs.json` next to the script. That file is ignored by git so your local presets stay local.
+
+Clicking a saved configuration loads it into the UI. Saving again with the same name updates it.
