@@ -12,7 +12,9 @@ from tkinter import ttk
 
 from mudae_logic import (
     BADGES,
+    BADGE_DATA_FILENAME,
     DEFAULT_DELAY,
+    badge_level_cost,
     badge_info_lines,
     badge_prerequisite_status,
     build_command_sequence,
@@ -21,7 +23,9 @@ from mudae_logic import (
     find_matching_config_name,
     format_kakera,
     format_set_result_message,
+    load_badge_data,
     next_level_kakera_cost,
+    normalize_badge_data,
     normalize_badge_counts,
     seed_default_configurations,
     total_kakera_cost,
@@ -114,10 +118,12 @@ def migrate_runtime_files():
 
 CONFIG_PATH = runtime_file_path(CONFIG_FILENAME)
 SETTINGS_PATH = runtime_file_path(SETTINGS_FILENAME)
+BADGE_DATA_PATH = runtime_file_path(BADGE_DATA_FILENAME)
 APP_TITLE = "Mudae Badge Setter"
 POINTS_PER_INCH = 72.0
 WINDOW_WIDTH_SCREEN_FRACTION = 0.35
 WINDOW_HEIGHT_SCREEN_FRACTION = 0.40
+BADGE_LEVELS = ((1, "I"), (2, "II"), (3, "III"), (4, "IV"))
 HELP_LINES = (
     "How to use this app:",
     "",
@@ -127,11 +133,12 @@ HELP_LINES = (
     "4. Set badge counts from 0 to 4.",
     "5. Locked badges stay at 0 until their prerequisites are met.",
     "6. Check the total cost and each badge's next-level cost.",
-    "7. Click a badge name to view its costs, prerequisites, and perks.",
-    "8. Enter a configuration name and click Save / Update to save the current badge counts.",
-    "9. Click a saved configuration to load it into the fields.",
-    "10. Use Delete to remove the selected or named configuration.",
-    "11. Click Set to run the sequence.",
+    "7. Click Edit Badge Cost to change badge prices.",
+    "8. Click a badge name to view its costs, prerequisites, and perks.",
+    "9. Enter a configuration name and click Save / Update to save the current badge counts.",
+    "10. Click a saved configuration to load it into the fields.",
+    "11. Use Delete to remove the selected or named configuration.",
+    "12. Click Set to run the sequence.",
     "",
     "When Set runs, the app briefly focuses Discord, clicks the current channel message box, sends the refund/confirm commands, sends the badge commands, then returns focus to this window.",
 )
@@ -414,6 +421,22 @@ class ConfigStore:
             json.dump(normalized, file, indent=2, sort_keys=True)
 
 
+class BadgeDataStore:
+    def __init__(self, path):
+        self.path = Path(path)
+
+    def load(self):
+        badge_data = load_badge_data(self.path)
+        self.save(badge_data)
+        return badge_data
+
+    def save(self, badge_data):
+        normalized = normalize_badge_data(badge_data)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("w", encoding="utf-8") as file:
+            json.dump(normalized, file, indent=2, sort_keys=True)
+
+
 class SilentPopup:
     def __init__(self, parent, title, lines=None):
         self.parent = parent
@@ -487,6 +510,99 @@ class SilentPopup:
         self.window.destroy()
 
 
+class BadgeCostEditor:
+    def __init__(self, parent, badge_data, save_command):
+        self.parent = parent
+        self.badge_data = normalize_badge_data(badge_data)
+        self.save_command = save_command
+        self.cost_vars = {}
+        self.error_var = tk.StringVar()
+        self.window = tk.Toplevel(parent)
+        self.window.title(f"{APP_TITLE} - Edit Badge Cost")
+        self.window.transient(parent)
+        self.window.resizable(False, False)
+        self.window.protocol("WM_DELETE_WINDOW", self.close)
+        self.frame = ttk.Frame(self.window, padding=16)
+        self.frame.grid(row=0, column=0, sticky="nsew")
+        self._build()
+
+    def _build(self):
+        ttk.Label(self.frame, text="Badge").grid(row=0, column=0, sticky="w", padx=(0, 12), pady=(0, 8))
+        for column, (_level, label) in enumerate(BADGE_LEVELS, start=1):
+            ttk.Label(self.frame, text=f"Level {label}").grid(
+                row=0,
+                column=column,
+                sticky="ew",
+                padx=4,
+                pady=(0, 8),
+            )
+
+        for row, badge in enumerate(BADGES, start=1):
+            ttk.Label(self.frame, text=badge.title()).grid(row=row, column=0, sticky="w", padx=(0, 12), pady=3)
+            for column, (level, _label) in enumerate(BADGE_LEVELS, start=1):
+                var = tk.StringVar(value=str(badge_level_cost(badge, level, self.badge_data)))
+                self.cost_vars[(badge, level)] = var
+                ttk.Entry(self.frame, textvariable=var, width=11, justify="right").grid(
+                    row=row,
+                    column=column,
+                    sticky="ew",
+                    padx=4,
+                    pady=3,
+                )
+
+        error_label = tk.Label(self.frame, textvariable=self.error_var, fg="#9b1c1c", anchor="w")
+        error_label.grid(row=len(BADGES) + 1, column=0, columnspan=5, sticky="ew", pady=(10, 0))
+
+        button_frame = ttk.Frame(self.frame)
+        button_frame.grid(row=len(BADGES) + 2, column=0, columnspan=5, sticky="e", pady=(12, 0))
+        ttk.Button(button_frame, text="Save", command=self.save).grid(row=0, column=0, padx=(0, 8))
+        ttk.Button(button_frame, text="Cancel", command=self.close).grid(row=0, column=1)
+
+    def _collect_badge_data(self):
+        badge_data = normalize_badge_data(self.badge_data)
+        for badge in BADGES:
+            for level, label in BADGE_LEVELS:
+                raw_cost = self.cost_vars[(badge, level)].get().strip().replace(",", "")
+                try:
+                    cost = int(raw_cost)
+                except ValueError as exc:
+                    raise ValueError(f"{badge.title()} Level {label} cost must be a whole number.") from exc
+                if cost < 0:
+                    raise ValueError(f"{badge.title()} Level {label} cost cannot be negative.")
+                badge_data["badges"][badge]["costs"][str(level)] = cost
+        return badge_data
+
+    def save(self):
+        try:
+            badge_data = self._collect_badge_data()
+            self.save_command(badge_data)
+        except (OSError, ValueError) as exc:
+            self.error_var.set(str(exc))
+            return
+        self.close()
+
+    def show(self):
+        self.window.update_idletasks()
+        self._center()
+        self.window.grab_set()
+        self.window.focus_force()
+
+    def _center(self):
+        parent_x = self.parent.winfo_rootx()
+        parent_y = self.parent.winfo_rooty()
+        parent_width = self.parent.winfo_width()
+        parent_height = self.parent.winfo_height()
+        width = self.window.winfo_width()
+        height = self.window.winfo_height()
+        x = parent_x + max(0, int((parent_width - width) / 2))
+        y = parent_y + max(0, int((parent_height - height) / 2))
+        self.window.geometry(f"+{x}+{y}")
+
+    def close(self):
+        self.window.grab_release()
+        self.window.destroy()
+
+
 class SettingsStore:
     def __init__(self, path):
         self.path = path
@@ -530,9 +646,11 @@ class KakeraSetterApp:
         self.root.minsize(360, 300)
 
         migrate_runtime_files()
+        self.badge_data_store = BadgeDataStore(BADGE_DATA_PATH)
+        self.badge_data = self.badge_data_store.load()
         self.store = ConfigStore(CONFIG_PATH)
         self.settings_store = SettingsStore(SETTINGS_PATH)
-        self.configs = seed_default_configurations(self.store.load())
+        self.configs = seed_default_configurations(self.store.load(), self.badge_data)
         self.store.save(self.configs)
         self.badge_vars = {}
         self.badge_spinboxes = {}
@@ -647,7 +765,7 @@ class KakeraSetterApp:
 
         action_frame = ttk.Frame(main)
         action_frame.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(8, 0))
-        action_frame.columnconfigure(1, weight=1)
+        action_frame.columnconfigure(2, weight=1)
 
         ttk.Button(action_frame, text="?", width=3, command=self.show_help).grid(
             row=0,
@@ -655,9 +773,15 @@ class KakeraSetterApp:
             sticky="w",
             padx=(0, 8),
         )
-        ttk.Label(action_frame, textvariable=self.status_var).grid(row=0, column=1, sticky="w")
+        ttk.Button(action_frame, text="Edit Badge Cost", command=self.show_badge_cost_editor).grid(
+            row=0,
+            column=1,
+            sticky="w",
+            padx=(0, 8),
+        )
+        ttk.Label(action_frame, textvariable=self.status_var).grid(row=0, column=2, sticky="w")
         self.set_button = ttk.Button(action_frame, text="Set", command=self.start_set_run)
-        self.set_button.grid(row=0, column=2, sticky="e")
+        self.set_button.grid(row=0, column=3, sticky="e")
 
     def _refresh_config_list(self):
         selected_name = self.config_name_var.get()
@@ -676,7 +800,7 @@ class KakeraSetterApp:
     def _next_cost_label(self, badge, locked):
         if locked:
             return "Locked"
-        next_cost = next_level_kakera_cost(self._current_badge_counts(), badge)
+        next_cost = next_level_kakera_cost(self._current_badge_counts(), badge, self.badge_data)
         if next_cost["state"] == "max":
             return "Max"
         if next_cost["state"] == "locked":
@@ -718,7 +842,9 @@ class KakeraSetterApp:
                 self.total_cost_var.set("Total cost: prerequisites needed")
                 self.status_var.set("Locked badge prerequisites missing")
             else:
-                self.total_cost_var.set(f"Total cost: {format_kakera(total_kakera_cost(counts))} kakera")
+                self.total_cost_var.set(
+                    f"Total cost: {format_kakera(total_kakera_cost(counts, self.badge_data))} kakera"
+                )
                 if cleared_badges:
                     self.status_var.set("Locked badge reset to 0")
                 elif self.status_var.get() == "Locked badge prerequisites missing":
@@ -801,8 +927,20 @@ class KakeraSetterApp:
     def show_user_id_help(self, parent=None):
         self.show_popup(f"{APP_TITLE} - Discord userID", USER_ID_HELP_TEXT, parent=parent)
 
+    def show_badge_cost_editor(self):
+        BadgeCostEditor(self.root, self.badge_data, self.save_badge_costs).show()
+
+    def save_badge_costs(self, badge_data):
+        self.badge_data_store.save(badge_data)
+        self.badge_data = normalize_badge_data(badge_data)
+        self._update_badge_ui_state()
+        self.status_var.set("Saved badge costs")
+
     def show_badge_info(self, badge):
-        self.show_popup(f"{APP_TITLE} - {badge.title()} Badge", "\n".join(badge_info_lines(badge)))
+        self.show_popup(
+            f"{APP_TITLE} - {badge.title()} Badge",
+            "\n".join(badge_info_lines(badge, self.badge_data)),
+        )
 
     def show_popup(self, title, message, parent=None):
         SilentPopup(parent or self.root, title, message.splitlines()).show()

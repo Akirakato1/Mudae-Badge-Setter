@@ -24,9 +24,10 @@ python mudae_badge_setter.py
 4. Set the message delay. The default is `0.8` seconds.
 5. Set each badge count from `0` to `4`.
 6. Check the live total cost and the next-level cost shown under each badge.
-7. Optionally enter a configuration name and click `Save / Update` to save the current badge counts.
-8. Click `Delete` to remove the selected or named configuration.
-9. Click `Set`.
+7. Click `Edit Badge Cost` to change the badge prices used by the cost display.
+8. Optionally enter a configuration name and click `Save / Update` to save the current badge counts.
+9. Click `Delete` to remove the selected or named configuration.
+10. Click `Set`.
 
 Click the `?` button in the lower-left corner of the app to show these usage notes inside the app. In that help popup, click `userID` to see how to find and copy your Discord ID.
 Click a badge name to show its costs, prerequisites, and perks.
@@ -58,7 +59,7 @@ Clicking a saved configuration loads only its badge counts into the UI. Saving a
 
 The app keeps permanent user ID and delay settings in `%APPDATA%\Mudae Badge Setter\settings.json`. This file stores only `user_id` and `delay`. Those fields are restored automatically the next time you open the app; the previous badge configuration is not auto-loaded.
 
-Badge costs, prerequisites, perks, and built-in default definitions are kept in `badge_data.json`.
+Badge costs are written to `%APPDATA%\Mudae Badge Setter\badge_data.json`. On first launch, the app creates this file with the built-in default badge costs, prerequisites, perks, and default configuration definitions. Click `Edit Badge Cost` to edit the cost grid in the app; the app immediately uses the saved costs for total cost, next-level cost, and badge info displays.
 
 Badge inputs are locked at `0` until their prerequisites are met. If a badge was already selected and you lower another badge so the prerequisite becomes unmet, the locked badge resets to `0` and becomes uneditable again. Bronze, Silver, and Gold are always available. Ruby and Sapphire unlock with Bronze II, Silver II, and Gold II, or any two other Level IV badges. Emerald and Diamond unlock with any two other Level IV badges.
 

@@ -199,14 +199,41 @@ def normalize_badge_counts(raw_counts):
     return {badge: clamp_badge_count(raw_counts.get(badge, 0)) for badge in BADGES}
 
 
+def default_badge_data():
+    return json.loads(EMBEDDED_BADGE_DATA_JSON)
+
+
+def normalize_badge_data(raw_data):
+    badge_data = default_badge_data()
+    raw_data = raw_data if isinstance(raw_data, dict) else {}
+    raw_badges = raw_data.get("badges", {})
+    raw_badges = raw_badges if isinstance(raw_badges, dict) else {}
+
+    for badge in BADGES:
+        raw_badge = raw_badges.get(badge, {})
+        raw_badge = raw_badge if isinstance(raw_badge, dict) else {}
+        raw_costs = raw_badge.get("costs", {})
+        raw_costs = raw_costs if isinstance(raw_costs, dict) else {}
+        for level in range(1, 5):
+            key = str(level)
+            default_cost = badge_data["badges"][badge]["costs"][key]
+            try:
+                cost = int(raw_costs.get(key, default_cost))
+            except (TypeError, ValueError):
+                cost = default_cost
+            badge_data["badges"][badge]["costs"][key] = max(0, cost)
+
+    return badge_data
+
+
 def load_badge_data(path=None):
     if path is None:
         path = Path(__file__).resolve().with_name(BADGE_DATA_FILENAME)
     try:
         with Path(path).open("r", encoding="utf-8") as file:
-            return json.load(file)
-    except OSError:
-        return json.loads(EMBEDDED_BADGE_DATA_JSON)
+            return normalize_badge_data(json.load(file))
+    except (OSError, json.JSONDecodeError):
+        return default_badge_data()
 
 
 def default_configurations(badge_data=None):

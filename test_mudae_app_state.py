@@ -3,6 +3,8 @@ import unittest
 from pathlib import Path
 
 from mudae_badge_setter import (
+    BADGE_DATA_FILENAME,
+    BadgeDataStore,
     CONFIG_FILENAME,
     ConfigStore,
     HELP_LINES,
@@ -62,11 +64,35 @@ class AppPersistenceTests(unittest.TestCase):
         self.assertEqual(loaded["main"]["badges"]["bronze"], 2)
         self.assertEqual(loaded["main"]["badges"]["diamond"], 4)
 
+    def test_badge_data_store_creates_default_runtime_file(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / BADGE_DATA_FILENAME
+            store = BadgeDataStore(path)
+
+            loaded = store.load()
+
+            self.assertTrue(path.exists())
+            self.assertEqual(loaded["badges"]["bronze"]["costs"]["1"], 1000)
+            self.assertEqual(loaded["badges"]["ruby"]["costs"]["4"], 28000)
+
+    def test_badge_data_store_saves_edited_costs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / BADGE_DATA_FILENAME
+            store = BadgeDataStore(path)
+            data = store.load()
+            data["badges"]["ruby"]["costs"]["4"] = 12345
+
+            store.save(data)
+            loaded = BadgeDataStore(path).load()
+
+        self.assertEqual(loaded["badges"]["ruby"]["costs"]["4"], 12345)
+
     def test_help_text_explains_core_workflow(self):
         help_text = "\n".join(HELP_LINES)
         self.assertIn("Open Discord", help_text)
         self.assertIn("Enter your discord userID.", help_text)
         self.assertIn("Message delay", help_text)
+        self.assertIn("Edit Badge Cost", help_text)
         self.assertIn("Set", help_text)
 
     def test_user_id_help_text_explains_copy_id_steps(self):
@@ -107,6 +133,17 @@ class AppPersistenceTests(unittest.TestCase):
         self.assertEqual(
             path,
             Path(r"C:\Users\Test\AppData\Roaming\Mudae Badge Setter\settings.json"),
+        )
+
+    def test_badge_data_filename_uses_appdata_folder(self):
+        path = runtime_file_path(
+            BADGE_DATA_FILENAME,
+            appdata=r"C:\Users\Test\AppData\Roaming",
+        )
+
+        self.assertEqual(
+            path,
+            Path(r"C:\Users\Test\AppData\Roaming\Mudae Badge Setter\badge_data.json"),
         )
 
     def test_app_data_dir_falls_back_when_appdata_is_missing(self):
