@@ -6,6 +6,7 @@ from mudae_logic import (
     badge_info_lines,
     badge_prerequisite_status,
     build_command_sequence,
+    clear_locked_badges,
     configuration_prerequisite_errors,
     default_configurations,
     find_matching_config_name,
@@ -151,6 +152,25 @@ class MudaeLogicTests(unittest.TestCase):
 
         self.assertEqual(len(errors), 1)
         self.assertIn("Ruby", errors[0])
+
+    def test_clear_locked_badges_resets_ruby_when_basic_prerequisite_drops(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 1, "silver": 2, "gold": 2, "ruby": 4})
+
+        cleared = clear_locked_badges(counts)
+
+        self.assertEqual(cleared["ruby"], 0)
+        self.assertEqual(cleared["bronze"], 1)
+
+    def test_clear_locked_badges_resets_level_four_badge_when_prerequisite_drops(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 4, "silver": 3, "emerald": 4})
+
+        cleared = clear_locked_badges(counts)
+
+        self.assertEqual(cleared["emerald"], 0)
+        self.assertEqual(cleared["bronze"], 4)
+        self.assertEqual(cleared["silver"], 3)
 
     def test_badge_info_lines_include_costs_and_prerequisites(self):
         lines = badge_info_lines("ruby")

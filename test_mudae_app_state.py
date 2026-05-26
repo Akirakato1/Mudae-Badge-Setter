@@ -75,8 +75,8 @@ class AppPersistenceTests(unittest.TestCase):
         self.assertIn("Developer Mode", USER_ID_HELP_TEXT)
         self.assertIn("Copy ID", USER_ID_HELP_TEXT)
 
-    def test_screen_fraction_geometry_uses_30_percent_width_and_40_percent_height(self):
-        self.assertEqual(screen_fraction_geometry(2560, 1440), "768x576")
+    def test_screen_fraction_geometry_uses_35_percent_width_and_40_percent_height(self):
+        self.assertEqual(screen_fraction_geometry(2560, 1440), "896x576")
 
     def test_app_base_dir_uses_exe_folder_when_frozen(self):
         base_dir = app_base_dir(

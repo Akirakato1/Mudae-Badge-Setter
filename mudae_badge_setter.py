@@ -16,6 +16,7 @@ from mudae_logic import (
     badge_info_lines,
     badge_prerequisite_status,
     build_command_sequence,
+    clear_locked_badges,
     configuration_prerequisite_errors,
     find_matching_config_name,
     format_kakera,
@@ -115,7 +116,7 @@ CONFIG_PATH = runtime_file_path(CONFIG_FILENAME)
 SETTINGS_PATH = runtime_file_path(SETTINGS_FILENAME)
 APP_TITLE = "Mudae Badge Setter"
 POINTS_PER_INCH = 72.0
-WINDOW_WIDTH_SCREEN_FRACTION = 0.30
+WINDOW_WIDTH_SCREEN_FRACTION = 0.35
 WINDOW_HEIGHT_SCREEN_FRACTION = 0.40
 HELP_LINES = (
     "How to use this app:",
@@ -124,7 +125,7 @@ HELP_LINES = (
     "2. Enter your discord userID.",
     "3. Set the Message delay. Use a larger value if Discord misses messages.",
     "4. Set badge counts from 0 to 4.",
-    "5. Locked badges become editable when their prerequisites are met.",
+    "5. Locked badges stay at 0 until their prerequisites are met.",
     "6. Check the total cost and each badge's next-level cost.",
     "7. Click a badge name to view its costs, prerequisites, and perks.",
     "8. Enter a configuration name and click Save / Update to save the current badge counts.",
@@ -537,6 +538,7 @@ class KakeraSetterApp:
         self.badge_spinboxes = {}
         self.badge_next_cost_vars = {}
         self.is_sending = False
+        self.is_updating_badge_ui = False
 
         self.user_id_var = tk.StringVar()
         self.delay_var = tk.StringVar(value=str(DEFAULT_DELAY))
@@ -690,25 +692,40 @@ class KakeraSetterApp:
         self.set_button.configure(state=state)
 
     def _update_badge_ui_state(self, *_args):
-        if not self.badge_vars:
+        if not self.badge_vars or self.is_updating_badge_ui:
             return
-        counts = self._current_badge_counts()
-        for badge in BADGES:
-            status = badge_prerequisite_status(badge, counts)
-            locked = not status["unlocked"]
-            if badge in self.badge_spinboxes:
-                self.badge_spinboxes[badge].configure(state=tk.DISABLED if locked else tk.NORMAL)
-            if badge in self.badge_next_cost_vars:
-                self.badge_next_cost_vars[badge].set(self._next_cost_label(badge, locked))
-        errors = configuration_prerequisite_errors(counts)
-        if errors:
-            self.total_cost_var.set("Total cost: prerequisites needed")
-            self.status_var.set("Locked badge prerequisites missing")
-        else:
-            self.total_cost_var.set(f"Total cost: {format_kakera(total_kakera_cost(counts))} kakera")
-            if self.status_var.get() == "Locked badge prerequisites missing":
-                self.status_var.set("Ready")
-        self._update_set_button_state(errors)
+        self.is_updating_badge_ui = True
+        try:
+            raw_counts = self._current_badge_counts()
+            cleared_counts = clear_locked_badges(raw_counts)
+            normalized_counts = normalize_badge_counts(raw_counts)
+            cleared_badges = [
+                badge for badge in BADGES if cleared_counts[badge] != normalized_counts[badge]
+            ]
+            for badge in cleared_badges:
+                self.badge_vars[badge].set(str(cleared_counts[badge]))
+
+            counts = self._current_badge_counts()
+            for badge in BADGES:
+                status = badge_prerequisite_status(badge, counts)
+                locked = not status["unlocked"]
+                if badge in self.badge_spinboxes:
+                    self.badge_spinboxes[badge].configure(state=tk.DISABLED if locked else tk.NORMAL)
+                if badge in self.badge_next_cost_vars:
+                    self.badge_next_cost_vars[badge].set(self._next_cost_label(badge, locked))
+            errors = configuration_prerequisite_errors(counts)
+            if errors:
+                self.total_cost_var.set("Total cost: prerequisites needed")
+                self.status_var.set("Locked badge prerequisites missing")
+            else:
+                self.total_cost_var.set(f"Total cost: {format_kakera(total_kakera_cost(counts))} kakera")
+                if cleared_badges:
+                    self.status_var.set("Locked badge reset to 0")
+                elif self.status_var.get() == "Locked badge prerequisites missing":
+                    self.status_var.set("Ready")
+            self._update_set_button_state(errors)
+        finally:
+            self.is_updating_badge_ui = False
 
     def _current_config(self):
         return {"badges": normalize_badge_counts(self._current_badge_counts())}

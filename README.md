@@ -60,6 +60,6 @@ The app keeps permanent user ID and delay settings in `%APPDATA%\Mudae Badge Set
 
 Badge costs, prerequisites, perks, and built-in default definitions are kept in `badge_data.json`.
 
-Badge inputs are locked until their prerequisites are met. Bronze, Silver, and Gold are always available. Ruby and Sapphire unlock with Bronze II, Silver II, and Gold II, or any two other Level IV badges. Emerald and Diamond unlock with any two other Level IV badges.
+Badge inputs are locked at `0` until their prerequisites are met. If a badge was already selected and you lower another badge so the prerequisite becomes unmet, the locked badge resets to `0` and becomes uneditable again. Bronze, Silver, and Gold are always available. Ruby and Sapphire unlock with Bronze II, Silver II, and Gold II, or any two other Level IV badges. Emerald and Diamond unlock with any two other Level IV badges.
 
 After a successful run, the popup says `Set to <configuration name>` when the current badge counts match a saved configuration. If they do not match a saved configuration, it uses the badge-count sequence instead, such as `Set to 3420000` for bronze 3, silver 4, gold 2, and the remaining badges 0.

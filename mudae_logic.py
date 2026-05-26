@@ -298,6 +298,18 @@ def configuration_prerequisite_errors(raw_counts):
     return errors
 
 
+def clear_locked_badges(raw_counts):
+    badge_counts = normalize_badge_counts(raw_counts)
+    changed = True
+    while changed:
+        changed = False
+        for badge in BADGES:
+            if badge_counts[badge] > 0 and not badge_prerequisite_status(badge, badge_counts)["unlocked"]:
+                badge_counts[badge] = 0
+                changed = True
+    return badge_counts
+
+
 def command_purchase_steps(badge_counts):
     badge_counts = normalize_badge_counts(badge_counts)
     owned = {badge: 0 for badge in BADGES}
