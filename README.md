@@ -20,13 +20,13 @@ python mudae_kakera_setter.py
 
 1. Open Discord desktop to the text channel where you want to interact with Mudae.
 2. Run the app.
-3. Enter only the numeric Discord user ID, for example `718568383347556424`.
+3. Enter your discord userID, for example `718568383347556424`.
 4. Set the message delay. The default is `0.8` seconds.
 5. Set each badge count from `0` to `4`.
 6. Optionally enter a configuration name and click `Save / Update`.
 7. Click `Set`.
 
-Click the `?` button in the lower-left corner of the app to show these usage notes inside the app.
+Click the `?` button in the lower-left corner of the app to show these usage notes inside the app. In that help popup, click `userID` to see how to find and copy your Discord ID.
 
 The app sends:
 
