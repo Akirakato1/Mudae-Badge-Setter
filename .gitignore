@@ -2,3 +2,6 @@ __pycache__/
 *.py[cod]
 mudae_kakera_configs.json
 mudae_kakera_last_state.json
+build/
+dist/
+*.spec
