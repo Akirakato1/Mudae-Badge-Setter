@@ -1,5 +1,7 @@
 import ctypes
 import json
+import os
+import shutil
 import sys
 import threading
 import time
@@ -20,6 +22,9 @@ from mudae_logic import (
 )
 
 
+APP_DATA_FOLDER = "Mudae Badge Setter"
+
+
 def app_base_dir(is_frozen=None, executable=None, source_file=None):
     if is_frozen is None:
         is_frozen = getattr(sys, "frozen", False)
@@ -28,8 +33,42 @@ def app_base_dir(is_frozen=None, executable=None, source_file=None):
     return Path(source_file or __file__).resolve().parent
 
 
-def runtime_file_path(filename, is_frozen=None, executable=None, source_file=None):
-    return app_base_dir(is_frozen, executable, source_file) / filename
+def app_data_dir(appdata=None, home=None):
+    if appdata is None:
+        appdata = os.environ.get("APPDATA", "")
+    if appdata:
+        return Path(appdata) / APP_DATA_FOLDER
+    return Path(home or Path.home()) / "AppData" / "Roaming" / APP_DATA_FOLDER
+
+
+def runtime_file_path(filename, appdata=None, home=None):
+    return app_data_dir(appdata, home) / filename
+
+
+def legacy_runtime_file_paths(filename, is_frozen=None, executable=None, source_file=None):
+    paths = [app_base_dir(is_frozen, executable, source_file) / filename]
+    source_path = Path(source_file or __file__).resolve().parent / filename
+    if source_path not in paths:
+        paths.append(source_path)
+    return paths
+
+
+def migrate_runtime_file(target_path, legacy_paths):
+    target_path = Path(target_path)
+    if target_path.exists():
+        return False
+    for legacy_path in legacy_paths:
+        legacy_path = Path(legacy_path)
+        if legacy_path.exists():
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(str(legacy_path), str(target_path))
+            return True
+    return False
+
+
+def migrate_runtime_files():
+    migrate_runtime_file(CONFIG_PATH, legacy_runtime_file_paths("mudae_kakera_configs.json"))
+    migrate_runtime_file(STATE_PATH, legacy_runtime_file_paths("mudae_kakera_last_state.json"))
 
 
 CONFIG_PATH = runtime_file_path("mudae_kakera_configs.json")
@@ -313,6 +352,7 @@ class ConfigStore:
 
     def save(self, configs):
         normalized = {str(name): normalize_config(config) for name, config in configs.items()}
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("w", encoding="utf-8") as file:
             json.dump(normalized, file, indent=2, sort_keys=True)
 
@@ -406,6 +446,7 @@ class AppStateStore:
 
     def save(self, state):
         normalized = self._normalize(state)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("w", encoding="utf-8") as file:
             json.dump(normalized, file, indent=2, sort_keys=True)
 
@@ -426,6 +467,7 @@ class KakeraSetterApp:
         )
         self.root.minsize(360, 300)
 
+        migrate_runtime_files()
         self.store = ConfigStore(CONFIG_PATH)
         self.state_store = AppStateStore(STATE_PATH)
         self.configs = self.store.load()
