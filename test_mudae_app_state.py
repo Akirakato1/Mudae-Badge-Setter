@@ -6,6 +6,8 @@ from mudae_kakera_setter import (
     AppStateStore,
     HELP_LINES,
     USER_ID_HELP_TEXT,
+    app_base_dir,
+    runtime_file_path,
     screen_fraction_geometry,
 )
 
@@ -47,6 +49,25 @@ class AppStateStoreTests(unittest.TestCase):
 
     def test_screen_fraction_geometry_uses_30_percent_of_screen(self):
         self.assertEqual(screen_fraction_geometry(2560, 1440), "768x432")
+
+    def test_app_base_dir_uses_exe_folder_when_frozen(self):
+        base_dir = app_base_dir(
+            is_frozen=True,
+            executable=r"C:\Tools\Mudae Badge Setter.exe",
+            source_file=r"C:\Temp\_MEI12345\mudae_kakera_setter.py",
+        )
+
+        self.assertEqual(base_dir, Path(r"C:\Tools"))
+
+    def test_runtime_file_path_uses_source_folder_for_script(self):
+        path = runtime_file_path(
+            "mudae_kakera_configs.json",
+            is_frozen=False,
+            executable=r"C:\Tools\Mudae Badge Setter.exe",
+            source_file=r"C:\Project\mudae_kakera_setter.py",
+        )
+
+        self.assertEqual(path, Path(r"C:\Project\mudae_kakera_configs.json"))
 
 
 if __name__ == "__main__":

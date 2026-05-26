@@ -1,5 +1,6 @@
 import ctypes
 import json
+import sys
 import threading
 import time
 import tkinter as tk
@@ -19,8 +20,20 @@ from mudae_logic import (
 )
 
 
-CONFIG_PATH = Path(__file__).with_name("mudae_kakera_configs.json")
-STATE_PATH = Path(__file__).with_name("mudae_kakera_last_state.json")
+def app_base_dir(is_frozen=None, executable=None, source_file=None):
+    if is_frozen is None:
+        is_frozen = getattr(sys, "frozen", False)
+    if is_frozen:
+        return Path(executable or sys.executable).resolve().parent
+    return Path(source_file or __file__).resolve().parent
+
+
+def runtime_file_path(filename, is_frozen=None, executable=None, source_file=None):
+    return app_base_dir(is_frozen, executable, source_file) / filename
+
+
+CONFIG_PATH = runtime_file_path("mudae_kakera_configs.json")
+STATE_PATH = runtime_file_path("mudae_kakera_last_state.json")
 APP_TITLE = "Mudae Badge Setter"
 POINTS_PER_INCH = 72.0
 WINDOW_SCREEN_FRACTION = 0.30
