@@ -115,7 +115,8 @@ CONFIG_PATH = runtime_file_path(CONFIG_FILENAME)
 SETTINGS_PATH = runtime_file_path(SETTINGS_FILENAME)
 APP_TITLE = "Mudae Badge Setter"
 POINTS_PER_INCH = 72.0
-WINDOW_SCREEN_FRACTION = 0.30
+WINDOW_WIDTH_SCREEN_FRACTION = 0.30
+WINDOW_HEIGHT_SCREEN_FRACTION = 0.40
 HELP_LINES = (
     "How to use this app:",
     "",
@@ -162,9 +163,14 @@ def configure_tk_scaling(root):
         root.tk.call("tk", "scaling", pixels_per_inch / POINTS_PER_INCH)
 
 
-def screen_fraction_geometry(screen_width, screen_height, fraction=WINDOW_SCREEN_FRACTION):
-    width = max(1, int(screen_width * fraction))
-    height = max(1, int(screen_height * fraction))
+def screen_fraction_geometry(
+    screen_width,
+    screen_height,
+    width_fraction=WINDOW_WIDTH_SCREEN_FRACTION,
+    height_fraction=WINDOW_HEIGHT_SCREEN_FRACTION,
+):
+    width = max(1, int(screen_width * width_fraction))
+    height = max(1, int(screen_height * height_fraction))
     return f"{width}x{height}"
 
 
