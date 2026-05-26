@@ -22,6 +22,7 @@ from mudae_logic import (
 CONFIG_PATH = Path(__file__).with_name("mudae_kakera_configs.json")
 STATE_PATH = Path(__file__).with_name("mudae_kakera_last_state.json")
 APP_TITLE = "Mudae Kakera Setter"
+POINTS_PER_INCH = 72.0
 HELP_LINES = (
     "How to use this app:",
     "",
@@ -41,6 +42,27 @@ USER_ID_HELP_TEXT = """How to get your Discord user ID:
 - Scroll down to the App Settings section and click Advanced.
 - Toggle the Developer Mode switch to the ON position.
 - Desktop: Click your profile picture at the bottom left, click the three dots (...), and choose Copy ID."""
+
+
+def enable_dpi_awareness():
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+        return
+    except Exception:
+        pass
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
+
+
+def configure_tk_scaling(root):
+    try:
+        pixels_per_inch = root.winfo_fpixels("1i")
+    except tk.TclError:
+        return
+    if pixels_per_inch > 0:
+        root.tk.call("tk", "scaling", pixels_per_inch / POINTS_PER_INCH)
 
 
 class WindowsClipboard:
@@ -611,7 +633,9 @@ class KakeraSetterApp:
 
 
 def main():
+    enable_dpi_awareness()
     root = tk.Tk()
+    configure_tk_scaling(root)
     KakeraSetterApp(root)
     root.mainloop()
 
