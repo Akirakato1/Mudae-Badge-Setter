@@ -4,6 +4,8 @@ from mudae_logic import (
     BADGES,
     DEFAULT_DELAY,
     build_command_sequence,
+    find_matching_config_name,
+    format_set_result_message,
     normalize_config,
     validate_delay,
     validate_user_id,
@@ -79,6 +81,35 @@ class MudaeLogicTests(unittest.TestCase):
     def test_normalize_config_defaults_invalid_badge_count(self):
         config = normalize_config({"badges": {"gold": "bad"}})
         self.assertEqual(config["badges"]["gold"], 0)
+
+    def test_format_set_result_message_uses_configuration_name(self):
+        counts = {badge: 0 for badge in BADGES}
+        self.assertEqual(format_set_result_message("main badges", counts), "Set to main badges")
+
+    def test_format_set_result_message_uses_badge_sequence_without_name(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts["bronze"] = 3
+        counts["silver"] = 4
+        counts["gold"] = 2
+
+        self.assertEqual(format_set_result_message("", counts), "Set to 3420000")
+
+    def test_find_matching_config_name_prefers_current_saved_name(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts["ruby"] = 2
+        configs = {
+            "other": {"badges": {"ruby": 2}},
+            "main": {"badges": {"ruby": 2}},
+        }
+
+        self.assertEqual(find_matching_config_name("main", configs, counts), "main")
+
+    def test_find_matching_config_name_returns_blank_when_current_settings_are_unsaved(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts["bronze"] = 3
+        configs = {"main": {"badges": {"bronze": 2}}}
+
+        self.assertEqual(find_matching_config_name("main", configs, counts), "")
 
 
 if __name__ == "__main__":
