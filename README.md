@@ -23,8 +23,9 @@ python mudae_badge_setter.py
 3. Enter your discord userID, for example `718568383347556424`.
 4. Set the message delay. The default is `0.8` seconds.
 5. Set each badge count from `0` to `4`.
-6. Optionally enter a configuration name and click `Save / Update`.
-7. Click `Set`.
+6. Optionally enter a configuration name and click `Save / Update` to save the current badge counts.
+7. Click `Delete` to remove the selected or named configuration.
+8. Click `Set`.
 
 Click the `?` button in the lower-left corner of the app to show these usage notes inside the app. In that help popup, click `userID` to see how to find and copy your Discord ID.
 
@@ -45,10 +46,10 @@ If Discord misses messages, increase the message delay.
 
 ## Saved Configurations
 
-Saved configurations are written to `%APPDATA%\Mudae Badge Setter\mudae_kakera_configs.json`. On first launch after an update, the app copies an older side-by-side config file into AppData if AppData does not already have one.
+Saved configurations are written to `%APPDATA%\Mudae Badge Setter\mudae_kakera_configs.json`. This file stores badge counts only. On first launch after an update, the app copies an older side-by-side config file into AppData if AppData does not already have one.
 
-Clicking a saved configuration loads it into the UI. Saving again with the same name updates it.
+Clicking a saved configuration loads only its badge counts into the UI. Saving again with the same name updates it. `Delete` removes the selected configuration, or the configuration named in the text field if none is selected.
 
-The app also remembers the last visible user ID, delay, badge counts, and selected configuration name in `%APPDATA%\Mudae Badge Setter\mudae_kakera_last_state.json` when it closes. Those fields are restored automatically the next time you open the app.
+The app keeps permanent user ID and delay settings in `%APPDATA%\Mudae Badge Setter\mudae_kakera_last_state.json`. This file stores only `user_id` and `delay`. Those fields are restored automatically the next time you open the app; the previous badge configuration is not auto-loaded.
 
 After a successful run, the popup says `Set to <configuration name>` when the current badge counts match a saved configuration. If they do not match a saved configuration, it uses the badge-count sequence instead, such as `Set to 3420000` for bronze 3, silver 4, gold 2, and the remaining badges 0.

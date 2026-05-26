@@ -16,7 +16,7 @@ from mudae_logic import (
     build_command_sequence,
     find_matching_config_name,
     format_set_result_message,
-    normalize_config,
+    normalize_badge_counts,
     validate_delay,
     validate_user_id,
 )
@@ -68,11 +68,11 @@ def migrate_runtime_file(target_path, legacy_paths):
 
 def migrate_runtime_files():
     migrate_runtime_file(CONFIG_PATH, legacy_runtime_file_paths("mudae_kakera_configs.json"))
-    migrate_runtime_file(STATE_PATH, legacy_runtime_file_paths("mudae_kakera_last_state.json"))
+    migrate_runtime_file(SETTINGS_PATH, legacy_runtime_file_paths("mudae_kakera_last_state.json"))
 
 
 CONFIG_PATH = runtime_file_path("mudae_kakera_configs.json")
-STATE_PATH = runtime_file_path("mudae_kakera_last_state.json")
+SETTINGS_PATH = runtime_file_path("mudae_kakera_last_state.json")
 APP_TITLE = "Mudae Badge Setter"
 POINTS_PER_INCH = 72.0
 WINDOW_SCREEN_FRACTION = 0.30
@@ -83,9 +83,10 @@ HELP_LINES = (
     "2. Enter your discord userID.",
     "3. Set the Message delay. Use a larger value if Discord misses messages.",
     "4. Set badge counts from 0 to 4.",
-    "5. Enter a configuration name and click Save / Update to save the current settings.",
+    "5. Enter a configuration name and click Save / Update to save the current badge counts.",
     "6. Click a saved configuration to load it into the fields.",
-    "7. Click Set to run the sequence.",
+    "7. Use Delete to remove the selected or named configuration.",
+    "8. Click Set to run the sequence.",
     "",
     "When Set runs, the app briefly focuses Discord, clicks the current channel message box, sends the refund/confirm commands, sends the badge commands, then returns focus to this window.",
 )
@@ -338,6 +339,12 @@ class ConfigStore:
     def __init__(self, path):
         self.path = path
 
+    @staticmethod
+    def _normalize_entry(config):
+        config = config if isinstance(config, dict) else {}
+        raw_badges = config.get("badges", config)
+        return {"badges": normalize_badge_counts(raw_badges if isinstance(raw_badges, dict) else {})}
+
     def load(self):
         if not self.path.exists():
             return {}
@@ -348,10 +355,10 @@ class ConfigStore:
             return {}
         if not isinstance(data, dict):
             return {}
-        return {str(name): normalize_config(config) for name, config in data.items()}
+        return {str(name): self._normalize_entry(config) for name, config in data.items()}
 
     def save(self, configs):
-        normalized = {str(name): normalize_config(config) for name, config in configs.items()}
+        normalized = {str(name): self._normalize_entry(config) for name, config in configs.items()}
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("w", encoding="utf-8") as file:
             json.dump(normalized, file, indent=2, sort_keys=True)
@@ -430,7 +437,7 @@ class SilentPopup:
         self.window.destroy()
 
 
-class AppStateStore:
+class SettingsStore:
     def __init__(self, path):
         self.path = path
 
@@ -453,9 +460,14 @@ class AppStateStore:
     @staticmethod
     def _normalize(state):
         state = state if isinstance(state, dict) else {}
-        config = normalize_config(state)
-        config["config_name"] = str(state.get("config_name", "")).strip()
-        return config
+        try:
+            delay = validate_delay(str(state.get("delay", DEFAULT_DELAY)))
+        except ValueError:
+            delay = DEFAULT_DELAY
+        return {
+            "user_id": str(state.get("user_id", "")).strip(),
+            "delay": delay,
+        }
 
 
 class KakeraSetterApp:
@@ -469,8 +481,9 @@ class KakeraSetterApp:
 
         migrate_runtime_files()
         self.store = ConfigStore(CONFIG_PATH)
-        self.state_store = AppStateStore(STATE_PATH)
+        self.settings_store = SettingsStore(SETTINGS_PATH)
         self.configs = self.store.load()
+        self.store.save(self.configs)
         self.badge_vars = {}
 
         self.user_id_var = tk.StringVar()
@@ -479,7 +492,7 @@ class KakeraSetterApp:
         self.status_var = tk.StringVar(value="Ready")
 
         self._build_ui()
-        self._load_last_state()
+        self._load_settings()
         self._refresh_config_list()
         self.root.protocol("WM_DELETE_WINDOW", self.close)
 
@@ -527,6 +540,13 @@ class KakeraSetterApp:
             padx=(8, 0),
             pady=4,
         )
+        ttk.Button(config_frame, text="Delete", command=self.delete_current_config).grid(
+            row=0,
+            column=3,
+            sticky="e",
+            padx=(8, 0),
+            pady=4,
+        )
 
         list_frame = ttk.Frame(main)
         list_frame.grid(row=4, column=0, columnspan=2, sticky="nsew", pady=8)
@@ -567,19 +587,11 @@ class KakeraSetterApp:
         return {badge: var.get() for badge, var in self.badge_vars.items()}
 
     def _current_config(self):
-        return normalize_config(
-            {
-                "user_id": self.user_id_var.get(),
-                "delay": self.delay_var.get(),
-                "badges": self._current_badge_counts(),
-            }
-        )
+        return {"badges": normalize_badge_counts(self._current_badge_counts())}
 
     def _apply_config(self, name, config):
-        normalized = normalize_config(config)
+        normalized = ConfigStore._normalize_entry(config)
         self.config_name_var.set(name)
-        self.user_id_var.set(normalized["user_id"])
-        self.delay_var.set(str(normalized["delay"]))
         for badge in BADGES:
             self.badge_vars[badge].set(normalized["badges"][badge])
 
@@ -591,11 +603,36 @@ class KakeraSetterApp:
         self.configs[name] = self._current_config()
         try:
             self.store.save(self.configs)
-            self.save_last_state()
+            self.save_settings()
         except OSError as exc:
             self.show_popup(APP_TITLE, f"Could not save configuration: {exc}")
             return
         self.status_var.set(f"Saved configuration: {name}")
+        self._refresh_config_list()
+
+    def _selected_config_name(self):
+        selection = self.config_list.curselection()
+        if selection:
+            return self.config_list.get(selection[0])
+        return self.config_name_var.get().strip()
+
+    def delete_current_config(self):
+        name = self._selected_config_name()
+        if not name:
+            self.show_popup(APP_TITLE, "Select or enter a configuration to delete.")
+            return
+        if name not in self.configs:
+            self.show_popup(APP_TITLE, f"No saved configuration named {name}.")
+            return
+        del self.configs[name]
+        try:
+            self.store.save(self.configs)
+        except OSError as exc:
+            self.show_popup(APP_TITLE, f"Could not delete configuration: {exc}")
+            return
+        if self.config_name_var.get().strip() == name:
+            self.config_name_var.set("")
+        self.status_var.set(f"Deleted configuration: {name}")
         self._refresh_config_list()
 
     def load_selected_config(self, _event=None):
@@ -621,21 +658,24 @@ class KakeraSetterApp:
     def show_popup(self, title, message, parent=None):
         SilentPopup(parent or self.root, title, message.splitlines()).show()
 
-    def _last_state(self):
-        state = self._current_config()
-        state["config_name"] = self.config_name_var.get().strip()
-        return state
+    def _current_settings(self):
+        return {
+            "user_id": self.user_id_var.get(),
+            "delay": self.delay_var.get(),
+        }
 
-    def _load_last_state(self):
-        state = self.state_store.load()
-        self._apply_config(state["config_name"], state)
+    def _load_settings(self):
+        settings = self.settings_store.load()
+        self.user_id_var.set(settings["user_id"])
+        self.delay_var.set(str(settings["delay"]))
+        self.settings_store.save(settings)
 
-    def save_last_state(self):
-        self.state_store.save(self._last_state())
+    def save_settings(self):
+        self.settings_store.save(self._current_settings())
 
     def close(self):
         try:
-            self.save_last_state()
+            self.save_settings()
         except OSError:
             pass
         self.root.destroy()
@@ -683,7 +723,7 @@ class KakeraSetterApp:
             self.show_popup(APP_TITLE, error)
             return
         try:
-            self.save_last_state()
+            self.save_settings()
         except OSError:
             pass
         result_name = find_matching_config_name(

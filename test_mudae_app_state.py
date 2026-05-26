@@ -3,8 +3,9 @@ import unittest
 from pathlib import Path
 
 from mudae_badge_setter import (
-    AppStateStore,
+    ConfigStore,
     HELP_LINES,
+    SettingsStore,
     USER_ID_HELP_TEXT,
     app_base_dir,
     app_data_dir,
@@ -14,11 +15,11 @@ from mudae_badge_setter import (
 )
 
 
-class AppStateStoreTests(unittest.TestCase):
-    def test_save_and_load_persists_last_ui_state(self):
+class AppPersistenceTests(unittest.TestCase):
+    def test_settings_store_saves_only_user_id_and_delay(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            path = Path(temp_dir) / "last_state.json"
-            store = AppStateStore(path)
+            path = Path(temp_dir) / "settings.json"
+            store = SettingsStore(path)
             store.save(
                 {
                     "config_name": "main",
@@ -28,13 +29,35 @@ class AppStateStoreTests(unittest.TestCase):
                 }
             )
 
-            loaded = AppStateStore(path).load()
+            raw_file = path.read_text(encoding="utf-8")
+            loaded = SettingsStore(path).load()
 
-        self.assertEqual(loaded["config_name"], "main")
+        self.assertNotIn("config_name", raw_file)
+        self.assertNotIn("badges", raw_file)
         self.assertEqual(loaded["user_id"], "718568383347556424")
         self.assertEqual(loaded["delay"], 1.5)
-        self.assertEqual(loaded["badges"]["bronze"], 2)
-        self.assertEqual(loaded["badges"]["diamond"], 4)
+
+    def test_config_store_saves_only_badge_counts(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "configs.json"
+            store = ConfigStore(path)
+            store.save(
+                {
+                    "main": {
+                        "user_id": "718568383347556424",
+                        "delay": "1.5",
+                        "badges": {"bronze": 2, "diamond": 4},
+                    }
+                }
+            )
+
+            raw_file = path.read_text(encoding="utf-8")
+            loaded = ConfigStore(path).load()
+
+        self.assertNotIn("user_id", raw_file)
+        self.assertNotIn("delay", raw_file)
+        self.assertEqual(loaded["main"]["badges"]["bronze"], 2)
+        self.assertEqual(loaded["main"]["badges"]["diamond"], 4)
 
     def test_help_text_explains_core_workflow(self):
         help_text = "\n".join(HELP_LINES)
