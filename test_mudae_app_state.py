@@ -60,6 +60,35 @@ class FakeUser32:
         return True
 
 
+class FakeClickUser32:
+    def __init__(self):
+        self.cursor = (321, 654)
+        self.set_cursor_calls = []
+        self.mouse_events = []
+
+    def GetCursorPos(self, point_pointer):
+        point = point_pointer._obj
+        point.x = self.cursor[0]
+        point.y = self.cursor[1]
+        return True
+
+    def GetWindowRect(self, hwnd, rect_pointer):
+        rect = rect_pointer._obj
+        rect.left = 100
+        rect.right = 900
+        rect.top = 50
+        rect.bottom = 650
+        return True
+
+    def SetCursorPos(self, x, y):
+        self.cursor = (x, y)
+        self.set_cursor_calls.append((x, y))
+        return True
+
+    def mouse_event(self, flags, _dx, _dy, _data, _extra):
+        self.mouse_events.append(flags)
+
+
 class AppPersistenceTests(unittest.TestCase):
     def test_settings_store_saves_only_user_id_delay_and_budget(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -300,6 +329,17 @@ class DiscordSenderFocusTests(unittest.TestCase):
 
         self.assertEqual(user32.show_window_calls, [(123, DiscordSender.SW_RESTORE)])
         self.assertEqual(user32.foreground_calls, [123])
+
+    def test_click_message_box_restores_original_cursor_position(self):
+        sender = DiscordSender.__new__(DiscordSender)
+        user32 = FakeClickUser32()
+        sender.user32 = user32
+
+        with mock.patch("mudae_badge_setter.time.sleep"):
+            sender.click_message_box(123)
+
+        self.assertEqual(user32.set_cursor_calls, [(500, 602), (321, 654)])
+        self.assertEqual(user32.cursor, (321, 654))
 
 
 class AppFinishBehaviorTests(unittest.TestCase):

@@ -324,6 +324,8 @@ class DiscordSender:
         self.user32.SetForegroundWindow.restype = wintypes.BOOL
         self.user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
         self.user32.GetWindowRect.restype = wintypes.BOOL
+        self.user32.GetCursorPos.argtypes = [ctypes.POINTER(wintypes.POINT)]
+        self.user32.GetCursorPos.restype = wintypes.BOOL
         self.user32.SetCursorPos.argtypes = [ctypes.c_int, ctypes.c_int]
         self.user32.SetCursorPos.restype = wintypes.BOOL
         self.user32.mouse_event.argtypes = [
@@ -372,16 +374,22 @@ class DiscordSender:
         time.sleep(0.4)
 
     def click_message_box(self, hwnd):
+        original_position = wintypes.POINT()
+        has_original_position = self.user32.GetCursorPos(ctypes.byref(original_position))
         rect = wintypes.RECT()
         if not self.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
             raise RuntimeError("Could not read the Discord window position.")
         x = int((rect.left + rect.right) / 2)
         y = int(rect.bottom - 48)
-        self.user32.SetCursorPos(x, y)
-        time.sleep(0.1)
-        self.user32.mouse_event(self.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, None)
-        time.sleep(0.05)
-        self.user32.mouse_event(self.MOUSEEVENTF_LEFTUP, 0, 0, 0, None)
+        try:
+            self.user32.SetCursorPos(x, y)
+            time.sleep(0.1)
+            self.user32.mouse_event(self.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, None)
+            time.sleep(0.05)
+            self.user32.mouse_event(self.MOUSEEVENTF_LEFTUP, 0, 0, 0, None)
+        finally:
+            if has_original_position:
+                self.user32.SetCursorPos(original_position.x, original_position.y)
         time.sleep(0.25)
 
     def _key_down(self, key):
