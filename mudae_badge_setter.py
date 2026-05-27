@@ -128,6 +128,7 @@ WINDOW_HEIGHT_SCREEN_FRACTION = 0.40
 HELP_POPUP_WIDTH_FRACTION = 0.30
 POPUP_HORIZONTAL_PADDING = 32
 BADGE_LEVELS = ((1, "I"), (2, "II"), (3, "III"), (4, "IV"))
+MUDAE_KAKERA_BADGES_URL = "https://mudae.fandom.com/wiki/Kakera_Badges"
 HELP_LINES = (
     "How to use this app:",
     "",
@@ -147,6 +148,8 @@ HELP_LINES = (
     "14. Click Set to run the sequence.",
     "",
     "When Set runs, the app focuses Discord without restoring an already-open window, clicks the current channel message box, sends the refund/confirm commands, sends the badge commands, and leaves Discord focused.",
+    "",
+    f"Mudae badge reference: {MUDAE_KAKERA_BADGES_URL}",
 )
 USER_ID_HELP_TEXT = """How to get your Discord user ID:
 

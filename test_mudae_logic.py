@@ -358,6 +358,35 @@ class MudaeLogicTests(unittest.TestCase):
         self.assertIn("Bronze II", text)
         self.assertIn("25% discount", text)
 
+    def test_badge_info_lines_use_wiki_accurate_tier_descriptions(self):
+        expected_lines = {
+            "sapphire": [
+                "Level I: Adds 1 permanent roll.",
+                "Level IV: Adds 1 permanent roll and replaces blue kakera with yellow kakera for your rolls.",
+            ],
+            "ruby": [
+                "Level I: Grants 2 supplementary wishslots.",
+                "Level II: Enhances chance to roll a character wish by +50%.",
+                "Level III: Reduces kakera power used when reacting to kakera by -20%.",
+                "Level IV: Adds +2 permanent rolls and reduces all badge level prices by 25%.",
+            ],
+            "emerald": [
+                "Level I: Unlocks $resetclaimtimer ($rt), usable every 50 hours.",
+                "Level II: Reduces $resetclaimtimer cooldown by 10 hours.",
+                "Level III: Reduces $resetclaimtimer cooldown by 10 hours.",
+                "Level IV: Reduces $resetclaimtimer cooldown by 10 hours and grants the kakera value of characters you claim.",
+            ],
+            "diamond": [
+                "Level I: Adds 1 $ouroharvest ($oh) per day.",
+                "Level IV: Adds 1 $ouroharvest ($oh) per day and adds 1 $ourochest ($oc) per day.",
+            ],
+        }
+
+        for badge, expected in expected_lines.items():
+            text = "\n".join(badge_info_lines(badge))
+            for line in expected:
+                self.assertIn(line, text)
+
     def test_validate_user_id_accepts_digits_only(self):
         self.assertEqual(validate_user_id(" 718568383347556424 "), "718568383347556424")
 

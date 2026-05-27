@@ -30,7 +30,10 @@ EMBEDDED_BADGE_DATA_JSON = r"""{
         "4": 48000
       },
       "perks": {
-        "levels_1_to_4": "Unlocks specialized perks and features related to Spheres and increasing Kakera generation efficiency."
+        "level_1": "Level I: Adds 1 $ouroharvest ($oh) per day.",
+        "level_2": "Level II: Adds 1 $ouroharvest ($oh) per day.",
+        "level_3": "Level III: Adds 1 $ouroharvest ($oh) per day.",
+        "level_4": "Level IV: Adds 1 $ouroharvest ($oh) per day and adds 1 $ourochest ($oc) per day."
       },
       "prerequisites": []
     },
@@ -42,8 +45,10 @@ EMBEDDED_BADGE_DATA_JSON = r"""{
         "4": 36000
       },
       "perks": {
-        "levels_1_to_3": "Unlocks the $resetclaimtimer ($rt) command and decreases its cooldown at higher levels.",
-        "level_4": "Allows you to gain the full Kakera value of any character you claim."
+        "level_1": "Level I: Unlocks $resetclaimtimer ($rt), usable every 50 hours.",
+        "level_2": "Level II: Reduces $resetclaimtimer cooldown by 10 hours.",
+        "level_3": "Level III: Reduces $resetclaimtimer cooldown by 10 hours.",
+        "level_4": "Level IV: Reduces $resetclaimtimer cooldown by 10 hours and grants the kakera value of characters you claim."
       },
       "prerequisites": [
         {
@@ -84,8 +89,10 @@ EMBEDDED_BADGE_DATA_JSON = r"""{
         "percent": 25
       },
       "perks": {
-        "levels_1_to_3": "Combines and enhances Bronze, Silver, and Gold perks.",
-        "level_4": "Grants a permanent 25% discount on all other badges."
+        "level_1": "Level I: Grants 2 supplementary wishslots.",
+        "level_2": "Level II: Enhances chance to roll a character wish by +50%.",
+        "level_3": "Level III: Reduces kakera power used when reacting to kakera by -20%.",
+        "level_4": "Level IV: Adds +2 permanent rolls and reduces all badge level prices by 25%."
       },
       "prerequisites": [
         {
@@ -108,8 +115,10 @@ EMBEDDED_BADGE_DATA_JSON = r"""{
         "4": 20000
       },
       "perks": {
-        "levels_1_to_3": "Each level gives an additional percentage chance to instantly spawn a kakera crystal when rolling a character.",
-        "level_4": "Permanently converts all blue kakera reactions into yellow kakera reactions."
+        "level_1": "Level I: Adds 1 permanent roll.",
+        "level_2": "Level II: Adds 1 permanent roll.",
+        "level_3": "Level III: Adds 1 permanent roll.",
+        "level_4": "Level IV: Adds 1 permanent roll and replaces blue kakera with yellow kakera for your rolls."
       },
       "prerequisites": [
         {

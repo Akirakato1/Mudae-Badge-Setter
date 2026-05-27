@@ -11,6 +11,7 @@ from mudae_badge_setter import (
     ConfigStore,
     DiscordSender,
     HELP_LINES,
+    MUDAE_KAKERA_BADGES_URL,
     POPUP_HORIZONTAL_PADDING,
     HELP_POPUP_WIDTH_FRACTION,
     KakeraSetterApp,
@@ -151,6 +152,7 @@ class AppPersistenceTests(unittest.TestCase):
         self.assertIn("Edit Badge Cost", help_text)
         self.assertIn("leaves Discord focused", help_text)
         self.assertNotIn("returns focus to this window", help_text)
+        self.assertIn(MUDAE_KAKERA_BADGES_URL, help_text)
         self.assertIn("Set", help_text)
 
     def test_user_id_help_text_explains_copy_id_steps(self):
