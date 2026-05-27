@@ -193,6 +193,14 @@ def popup_wraplength(window_width, fraction=HELP_POPUP_WIDTH_FRACTION):
     return max(1, popup_window_width(window_width, fraction) - POPUP_HORIZONTAL_PADDING)
 
 
+def popup_source_width(source):
+    try:
+        source.update_idletasks()
+        return max(1, int(source.winfo_screenwidth()))
+    except tk.TclError:
+        return 1
+
+
 def empty_badge_counts():
     return {badge: 0 for badge in BADGES}
 
@@ -488,12 +496,7 @@ class SilentPopup:
         return popup_window_width(self._source_width())
 
     def _source_width(self):
-        try:
-            self.wrap_source.update_idletasks()
-            width = self.wrap_source.winfo_width()
-        except tk.TclError:
-            width = 1
-        return width
+        return popup_source_width(self.wrap_source)
 
     def add_help_line_with_user_id_link(self, command):
         row_frame = ttk.Frame(self.frame)

@@ -18,6 +18,7 @@ from mudae_badge_setter import (
     cleanup_obsolete_runtime_files,
     empty_badge_counts,
     migrate_runtime_file,
+    popup_source_width,
     popup_window_width,
     popup_wraplength,
     runtime_file_path,
@@ -123,11 +124,30 @@ class AppPersistenceTests(unittest.TestCase):
     def test_screen_fraction_geometry_uses_35_percent_width_and_40_percent_height(self):
         self.assertEqual(screen_fraction_geometry(2560, 1440), "896x576")
 
-    def test_popup_window_width_uses_30_percent_of_window_width(self):
-        self.assertEqual(popup_window_width(900), int(900 * HELP_POPUP_WIDTH_FRACTION))
+    def test_popup_window_width_uses_30_percent_of_screen_width(self):
+        self.assertEqual(popup_window_width(2560), int(2560 * HELP_POPUP_WIDTH_FRACTION))
 
     def test_popup_wraplength_fits_inside_popup_padding(self):
-        self.assertEqual(popup_wraplength(900), popup_window_width(900) - POPUP_HORIZONTAL_PADDING)
+        self.assertEqual(popup_wraplength(2560), popup_window_width(2560) - POPUP_HORIZONTAL_PADDING)
+
+    def test_popup_source_width_uses_screen_width_not_app_width(self):
+        class FakeWindow:
+            def __init__(self):
+                self.updated = False
+
+            def update_idletasks(self):
+                self.updated = True
+
+            def winfo_width(self):
+                return 900
+
+            def winfo_screenwidth(self):
+                return 2560
+
+        window = FakeWindow()
+
+        self.assertEqual(popup_source_width(window), 2560)
+        self.assertTrue(window.updated)
 
     def test_app_base_dir_uses_exe_folder_when_frozen(self):
         base_dir = app_base_dir(
