@@ -23,11 +23,7 @@
       "perks": {
         "levels_1_to_4": "Unlocks specialized perks and features related to Spheres and increasing Kakera generation efficiency."
       },
-      "prerequisites": [
-        {
-          "any_two_level_4_badges": true
-        }
-      ]
+      "prerequisites": []
     },
     "emerald": {
       "costs": {
@@ -41,6 +37,13 @@
         "level_4": "Allows you to gain the full Kakera value of any character you claim."
       },
       "prerequisites": [
+        {
+          "all_of": {
+            "bronze": 3,
+            "gold": 3,
+            "silver": 3
+          }
+        },
         {
           "any_two_level_4_badges": true
         }
@@ -78,9 +81,9 @@
       "prerequisites": [
         {
           "all_of": {
-            "bronze": 2,
-            "gold": 2,
-            "silver": 2
+            "bronze": 1,
+            "gold": 1,
+            "silver": 1
           }
         },
         {
@@ -148,12 +151,12 @@
     },
     "Sapphire 4 Minimum Cost": {
       "badges": {
-        "bronze": 2,
-        "gold": 2,
+        "bronze": 1,
+        "gold": 1,
         "sapphire": 4,
-        "silver": 2
+        "silver": 1
       },
-      "estimated_cost": 68000,
+      "estimated_cost": 56000,
       "target": "sapphire"
     }
   }

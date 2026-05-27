@@ -5,8 +5,7 @@ from pathlib import Path
 BADGES = ("bronze", "silver", "gold", "sapphire", "ruby", "emerald", "diamond")
 DEFAULT_DELAY = 0.8
 BASIC_UNLOCK_BADGES = ("bronze", "silver", "gold")
-LEVEL_FOUR_UNLOCK_BADGES = ("ruby", "sapphire")
-TWO_LEVEL_FOUR_UNLOCK_BADGES = ("emerald", "diamond")
+BASIC_PREREQUISITE_LEVELS = {"sapphire": 1, "ruby": 2, "emerald": 3}
 BADGE_DATA_FILENAME = "badge_data.json"
 EMBEDDED_BADGE_DATA_JSON = r"""{
   "badges": {
@@ -33,11 +32,7 @@ EMBEDDED_BADGE_DATA_JSON = r"""{
       "perks": {
         "levels_1_to_4": "Unlocks specialized perks and features related to Spheres and increasing Kakera generation efficiency."
       },
-      "prerequisites": [
-        {
-          "any_two_level_4_badges": true
-        }
-      ]
+      "prerequisites": []
     },
     "emerald": {
       "costs": {
@@ -51,6 +46,13 @@ EMBEDDED_BADGE_DATA_JSON = r"""{
         "level_4": "Allows you to gain the full Kakera value of any character you claim."
       },
       "prerequisites": [
+        {
+          "all_of": {
+            "bronze": 3,
+            "gold": 3,
+            "silver": 3
+          }
+        },
         {
           "any_two_level_4_badges": true
         }
@@ -88,9 +90,9 @@ EMBEDDED_BADGE_DATA_JSON = r"""{
       "prerequisites": [
         {
           "all_of": {
-            "bronze": 2,
-            "gold": 2,
-            "silver": 2
+            "bronze": 1,
+            "gold": 1,
+            "silver": 1
           }
         },
         {
@@ -158,12 +160,12 @@ EMBEDDED_BADGE_DATA_JSON = r"""{
     },
     "Sapphire 4 Minimum Cost": {
       "badges": {
-        "bronze": 2,
-        "gold": 2,
+        "bronze": 1,
+        "gold": 1,
         "sapphire": 4,
-        "silver": 2
+        "silver": 1
       },
-      "estimated_cost": 68000,
+      "estimated_cost": 56000,
       "target": "sapphire"
     }
   }
@@ -284,10 +286,10 @@ def level_four_badge_count(raw_counts, exclude=()):
 def prerequisite_text(badge):
     if badge in BASIC_UNLOCK_BADGES:
         return "None"
-    if badge in LEVEL_FOUR_UNLOCK_BADGES:
-        return "Bronze II, Silver II, and Gold II; or any two other Level IV badges."
-    if badge in TWO_LEVEL_FOUR_UNLOCK_BADGES:
-        return "Any two other Level IV badges."
+    if badge in BASIC_PREREQUISITE_LEVELS:
+        level = BASIC_PREREQUISITE_LEVELS[badge]
+        numeral = {1: "I", 2: "II", 3: "III"}[level]
+        return f"Bronze {numeral}, Silver {numeral}, and Gold {numeral}; or any two other Level IV badges."
     return "None"
 
 
@@ -296,21 +298,19 @@ def badge_prerequisite_status(badge, raw_counts):
     badge_counts = normalize_badge_counts(raw_counts)
     if badge not in BADGES:
         return {"unlocked": False, "reason": "Unknown badge."}
-    if badge in BASIC_UNLOCK_BADGES:
+    if badge in BASIC_UNLOCK_BADGES or badge == "diamond":
         return {"unlocked": True, "reason": "No prerequisites."}
-    if badge in LEVEL_FOUR_UNLOCK_BADGES:
-        basic_unlock = all(badge_counts[required] >= 2 for required in BASIC_UNLOCK_BADGES)
+    if badge in BASIC_PREREQUISITE_LEVELS:
+        required_level = BASIC_PREREQUISITE_LEVELS[badge]
+        basic_unlock = all(badge_counts[required] >= required_level for required in BASIC_UNLOCK_BADGES)
         level_four_unlock = level_four_badge_count(badge_counts, exclude=(badge,)) >= 2
         if basic_unlock or level_four_unlock:
             return {"unlocked": True, "reason": "Prerequisites met."}
+        numeral = {1: "I", 2: "II", 3: "III"}[required_level]
         return {
             "unlocked": False,
-            "reason": "Requires Bronze II, Silver II, and Gold II, or any two other Level IV badges.",
+            "reason": f"Requires Bronze {numeral}, Silver {numeral}, and Gold {numeral}, or any two other Level IV badges.",
         }
-    if badge in TWO_LEVEL_FOUR_UNLOCK_BADGES:
-        if level_four_badge_count(badge_counts, exclude=(badge,)) >= 2:
-            return {"unlocked": True, "reason": "Prerequisites met."}
-        return {"unlocked": False, "reason": "Requires any two other Level IV badges."}
     return {"unlocked": True, "reason": "No prerequisites."}
 
 
@@ -363,21 +363,22 @@ def command_purchase_steps(badge_counts):
             if badge not in excluded and badge_counts[badge] >= 4 and level_four_count(excluded) < 2:
                 buy_to_level(badge, 4)
 
-    def buy_basic_unlocks():
+    def buy_basic_unlocks(level):
         for badge in BASIC_UNLOCK_BADGES:
-            buy_to_level(badge, 2)
+            buy_to_level(badge, level)
 
-    def has_basic_unlocks():
-        return all(owned[badge] >= 2 for badge in BASIC_UNLOCK_BADGES)
+    def has_basic_unlocks(level):
+        return all(owned[badge] >= level for badge in BASIC_UNLOCK_BADGES)
 
-    def can_buy_basic_unlocks():
-        return all(badge_counts[badge] >= 2 for badge in BASIC_UNLOCK_BADGES)
+    def can_buy_basic_unlocks(level):
+        return all(badge_counts[badge] >= level for badge in BASIC_UNLOCK_BADGES)
 
     def unlock_basic_or_two_level_four(badge):
-        if has_basic_unlocks() or level_four_count((badge,)) >= 2:
+        required_level = BASIC_PREREQUISITE_LEVELS[badge]
+        if has_basic_unlocks(required_level) or level_four_count((badge,)) >= 2:
             return
-        if can_buy_basic_unlocks():
-            buy_basic_unlocks()
+        if can_buy_basic_unlocks(required_level):
+            buy_basic_unlocks(required_level)
         else:
             buy_level_four_unlocks((badge,))
 
@@ -388,10 +389,8 @@ def command_purchase_steps(badge_counts):
     for badge in BADGES:
         if not remaining[badge]:
             continue
-        if badge in LEVEL_FOUR_UNLOCK_BADGES:
+        if badge in BASIC_PREREQUISITE_LEVELS:
             unlock_basic_or_two_level_four(badge)
-        elif badge in TWO_LEVEL_FOUR_UNLOCK_BADGES and level_four_count((badge,)) < 2:
-            buy_level_four_unlocks((badge,))
         buy(badge, remaining[badge])
 
     return steps

@@ -85,9 +85,9 @@ class MudaeLogicTests(unittest.TestCase):
         self.assertEqual(
             defaults["Sapphire 4 Minimum Cost"]["badges"],
             {
-                "bronze": 2,
-                "silver": 2,
-                "gold": 2,
+                "bronze": 1,
+                "silver": 1,
+                "gold": 1,
                 "sapphire": 4,
                 "ruby": 0,
                 "emerald": 0,
@@ -133,16 +133,55 @@ class MudaeLogicTests(unittest.TestCase):
     def test_badge_prerequisite_status_reports_locked_badges(self):
         counts = {badge: 0 for badge in BADGES}
 
+        self.assertFalse(badge_prerequisite_status("sapphire", counts)["unlocked"])
+        self.assertFalse(badge_prerequisite_status("ruby", counts)["unlocked"])
+        self.assertFalse(badge_prerequisite_status("emerald", counts)["unlocked"])
+        self.assertTrue(badge_prerequisite_status("diamond", counts)["unlocked"])
+
+        counts.update({"bronze": 1, "silver": 1, "gold": 1})
+        self.assertTrue(badge_prerequisite_status("sapphire", counts)["unlocked"])
         self.assertFalse(badge_prerequisite_status("ruby", counts)["unlocked"])
         self.assertFalse(badge_prerequisite_status("emerald", counts)["unlocked"])
 
         counts.update({"bronze": 2, "silver": 2, "gold": 2})
         self.assertTrue(badge_prerequisite_status("ruby", counts)["unlocked"])
         self.assertTrue(badge_prerequisite_status("sapphire", counts)["unlocked"])
+        self.assertFalse(badge_prerequisite_status("emerald", counts)["unlocked"])
+
+        counts.update({"bronze": 3, "silver": 3, "gold": 3})
+        self.assertTrue(badge_prerequisite_status("emerald", counts)["unlocked"])
 
         counts.update({"bronze": 4, "silver": 4, "gold": 0})
         self.assertTrue(badge_prerequisite_status("emerald", counts)["unlocked"])
         self.assertTrue(badge_prerequisite_status("diamond", counts)["unlocked"])
+
+    def test_build_command_sequence_uses_sapphire_level_one_prerequisites(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 1, "silver": 1, "gold": 1, "sapphire": 4})
+
+        commands = build_command_sequence("718568383347556424", counts)
+
+        self.assertEqual(
+            commands,
+            [
+                "$kakerarefund <@718568383347556424>",
+                "confirm",
+                "$bronze 1",
+                "y",
+                "$silver 1",
+                "y",
+                "$gold 1",
+                "y",
+                "$sapphire 4",
+                "y",
+            ],
+        )
+
+    def test_configuration_prerequisite_errors_allows_diamond_without_prerequisites(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts["diamond"] = 4
+
+        self.assertEqual(configuration_prerequisite_errors(counts), [])
 
     def test_configuration_prerequisite_errors_rejects_locked_badges(self):
         counts = {badge: 0 for badge in BADGES}
