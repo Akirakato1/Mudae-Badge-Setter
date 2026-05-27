@@ -8,6 +8,7 @@ from mudae_logic import (
     build_command_sequence,
     clear_locked_badges,
     configuration_prerequisite_errors,
+    default_badge_data,
     default_configurations,
     find_matching_config_name,
     format_set_result_message,
@@ -62,10 +63,94 @@ class MudaeLogicTests(unittest.TestCase):
                 "y",
                 "$ruby 4",
                 "y",
-                "$bronze 2",
+                "$bronze 4",
                 "y",
             ],
         )
+
+    def test_build_command_sequence_uses_minimum_cost_ruby_four_prerequisite_split(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 4, "silver": 4, "gold": 4, "ruby": 4})
+
+        commands = build_command_sequence("718568383347556424", counts)
+
+        self.assertEqual(
+            commands,
+            [
+                "$kakerarefund <@718568383347556424>",
+                "confirm",
+                "$bronze 2",
+                "y",
+                "$silver 2",
+                "y",
+                "$gold 2",
+                "y",
+                "$ruby 4",
+                "y",
+                "$bronze 4",
+                "y",
+                "$silver 4",
+                "y",
+                "$gold 4",
+                "y",
+            ],
+        )
+
+    def test_build_command_sequence_can_unlock_ruby_four_with_two_level_four_badges(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 4, "ruby": 4, "diamond": 4})
+
+        commands = build_command_sequence("718568383347556424", counts)
+
+        self.assertEqual(
+            commands,
+            [
+                "$kakerarefund <@718568383347556424>",
+                "confirm",
+                "$bronze 4",
+                "y",
+                "$diamond 4",
+                "y",
+                "$ruby 4",
+                "y",
+            ],
+        )
+
+    def test_ruby_four_prerequisite_split_uses_custom_badge_costs(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 2, "silver": 4, "gold": 2, "ruby": 4, "diamond": 4})
+        badge_data = default_badge_data()
+        for badge in ("bronze", "gold"):
+            badge_data["badges"][badge]["costs"]["1"] = 50000
+            badge_data["badges"][badge]["costs"]["2"] = 50000
+        for level in ("1", "2", "3", "4"):
+            badge_data["badges"]["diamond"]["costs"][level] = 1
+
+        commands = build_command_sequence("718568383347556424", counts, badge_data)
+
+        self.assertEqual(
+            commands,
+            [
+                "$kakerarefund <@718568383347556424>",
+                "confirm",
+                "$silver 4",
+                "y",
+                "$diamond 4",
+                "y",
+                "$ruby 4",
+                "y",
+                "$bronze 2",
+                "y",
+                "$gold 2",
+                "y",
+            ],
+        )
+
+    def test_total_kakera_cost_uses_minimum_cost_ruby_four_prerequisite_split(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 4, "silver": 4, "gold": 4, "ruby": 4})
+
+        self.assertEqual(total_kakera_cost(counts), 119500)
 
     def test_default_configurations_include_minimum_cost_targets(self):
         defaults = default_configurations()

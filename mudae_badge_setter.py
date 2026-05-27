@@ -1022,7 +1022,7 @@ class KakeraSetterApp:
             errors = self._prerequisite_errors()
             if errors:
                 raise ValueError(errors[0])
-            commands = build_command_sequence(user_id, self._current_badge_counts())
+            commands = build_command_sequence(user_id, self._current_badge_counts(), self.badge_data)
         except ValueError as exc:
             self.show_popup(APP_TITLE, str(exc))
             return

@@ -337,21 +337,51 @@ def clear_locked_badges(raw_counts):
     return badge_counts
 
 
-def command_purchase_steps(badge_counts):
+def badge_requirement_cost(requirements, badge_data=None):
+    badge_data = badge_data or load_badge_data()
+    total = 0
+    for badge, target_level in requirements.items():
+        for level in range(1, target_level + 1):
+            total += badge_level_cost(badge, level, badge_data)
+    return total
+
+
+def minimum_ruby_prerequisite_requirements(badge_counts, badge_data=None):
+    badge_counts = normalize_badge_counts(badge_counts)
+    candidates = []
+    basic_requirements = {badge: BASIC_PREREQUISITE_LEVELS["ruby"] for badge in BASIC_UNLOCK_BADGES}
+    if all(badge_counts[badge] >= level for badge, level in basic_requirements.items()):
+        candidates.append(basic_requirements)
+
+    for first_index, first_badge in enumerate(BADGES):
+        if first_badge == "ruby" or badge_counts[first_badge] < 4:
+            continue
+        for second_badge in BADGES[first_index + 1 :]:
+            if second_badge == "ruby" or badge_counts[second_badge] < 4:
+                continue
+            candidates.append({first_badge: 4, second_badge: 4})
+
+    if not candidates:
+        return {}
+    return min(
+        candidates,
+        key=lambda requirements: (
+            badge_requirement_cost(requirements, badge_data),
+            [BADGES.index(badge) for badge in requirements],
+        ),
+    )
+
+
+def command_purchase_steps(badge_counts, badge_data=None):
     badge_counts = normalize_badge_counts(badge_counts)
     owned = {badge: 0 for badge in BADGES}
-    remaining = dict(badge_counts)
     steps = []
 
-    def buy(badge, amount):
-        amount = min(max(0, amount), remaining[badge])
-        if amount:
-            steps.append((badge, amount))
-            owned[badge] += amount
-            remaining[badge] -= amount
-
     def buy_to_level(badge, level):
-        buy(badge, min(level, badge_counts[badge]) - owned[badge])
+        level = min(max(0, level), badge_counts[badge])
+        if level > owned[badge]:
+            steps.append((badge, level))
+            owned[badge] = level
 
     def level_four_count(exclude=()):
         excluded = set(exclude)
@@ -383,15 +413,16 @@ def command_purchase_steps(badge_counts):
             buy_level_four_unlocks((badge,))
 
     if badge_counts["ruby"] == 4:
-        unlock_basic_or_two_level_four("ruby")
+        for badge, level in minimum_ruby_prerequisite_requirements(badge_counts, badge_data).items():
+            buy_to_level(badge, level)
         buy_to_level("ruby", 4)
 
     for badge in BADGES:
-        if not remaining[badge]:
+        if owned[badge] >= badge_counts[badge]:
             continue
         if badge in BASIC_PREREQUISITE_LEVELS:
             unlock_basic_or_two_level_four(badge)
-        buy(badge, remaining[badge])
+        buy_to_level(badge, badge_counts[badge])
 
     return steps
 
@@ -406,8 +437,8 @@ def purchase_level_items(raw_counts, badge_data=None):
     owned = {badge: 0 for badge in BADGES}
     ruby_discount_active = False
     items = []
-    for badge, amount in command_purchase_steps(badge_counts):
-        for _ in range(amount):
+    for badge, target_level in command_purchase_steps(badge_counts, badge_data):
+        while owned[badge] < target_level:
             level = owned[badge] + 1
             base_cost = badge_level_cost(badge, level, badge_data)
             discounted = ruby_discount_active and badge != "ruby"
@@ -482,15 +513,15 @@ def badge_info_lines(badge, badge_data=None):
     return lines
 
 
-def build_command_sequence(raw_user_id, raw_badge_counts):
+def build_command_sequence(raw_user_id, raw_badge_counts, badge_data=None):
     user_id = validate_user_id(raw_user_id)
     badge_counts = normalize_badge_counts(raw_badge_counts)
     errors = configuration_prerequisite_errors(badge_counts)
     if errors:
         raise ValueError("; ".join(errors))
     commands = [f"$kakerarefund <@{user_id}>", "confirm"]
-    for badge, count in command_purchase_steps(badge_counts):
-        commands.extend([f"${badge} {count}", "y"])
+    for badge, target_level in command_purchase_steps(badge_counts, badge_data):
+        commands.extend([f"${badge} {target_level}", "y"])
     return commands
 
 

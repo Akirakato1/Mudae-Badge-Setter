@@ -40,8 +40,8 @@ $kakerarefund <@user_id>
 confirm
 ```
 
-Then it sends one `$<badge> <count>` command plus `y` for each selected badge count above `0`, such as `$bronze 3` then `y`.
-If ruby is set to `4`, the app sends its prerequisites first, then `$ruby 4`, then the remaining badge commands.
+Then it sends one `$<badge> <target level>` command plus `y` for each selected badge count above `0`, such as `$bronze 3` then `y`.
+If ruby is set to `4`, the app chooses the cheapest valid Ruby prerequisite path first, sends those badge commands, then sends `$ruby 4`, then sends the remaining badge commands.
 The total cost display uses that same order, so prerequisite levels bought before Ruby IV are full price and later eligible levels get Ruby IV's 25% discount.
 
 ## Focus Behavior
