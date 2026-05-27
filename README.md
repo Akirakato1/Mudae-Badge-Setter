@@ -2,6 +2,16 @@
 
 A small Windows Python UI for saving Mudae kakera badge configurations and sending the matching commands through the open Discord desktop client.
 
+## Screenshots
+
+Main badge setter:
+
+![Mudae Badge Setter main UI](screenshots/main_ui.png)
+
+Badge cost editor:
+
+![Mudae Badge Setter badge cost editor](screenshots/badge_cost.png)
+
 ## Run
 
 On this machine, use the Windows Python launcher because the default Anaconda `python` cannot start `tkinter`:
@@ -64,5 +74,3 @@ The app keeps permanent user ID, delay, and budget settings in `%APPDATA%\Mudae 
 Badge costs are written to `%APPDATA%\Mudae Badge Setter\badge_data.json`. On first launch, the app creates this file with the built-in default badge costs, prerequisites, perks, and default configuration definitions. Click `Edit Badge Cost` to edit the cost grid in the app; the app immediately uses the saved costs for total cost, next-level cost, and badge info displays.
 
 Badge inputs are locked at `0` until their prerequisites are met. If a badge was already selected and you lower another badge so the prerequisite becomes unmet, the locked badge resets to `0` and becomes uneditable again. Bronze, Silver, Gold, and Diamond are always available. Sapphire unlocks with Bronze I, Silver I, and Gold I, or any two other Level IV badges. Ruby unlocks with Bronze II, Silver II, and Gold II, or any two other Level IV badges. Emerald unlocks with Bronze III, Silver III, and Gold III, or any two other Level IV badges.
-
-After a successful run, the popup says `Set to <configuration name>` when the current badge counts match a saved configuration. If they do not match a saved configuration, it uses the badge-count sequence instead, such as `Set to 3420000` for bronze 3, silver 4, gold 2, and the remaining badges 0.
