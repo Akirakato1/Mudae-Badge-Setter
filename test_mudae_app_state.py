@@ -1,15 +1,19 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from mudae_badge_setter import (
+    BADGES,
     BADGE_DATA_FILENAME,
     BadgeDataStore,
     CONFIG_FILENAME,
     ConfigStore,
+    DiscordSender,
     HELP_LINES,
     POPUP_HORIZONTAL_PADDING,
     HELP_POPUP_WIDTH_FRACTION,
+    KakeraSetterApp,
     SETTINGS_FILENAME,
     SettingsStore,
     USER_ID_HELP_TEXT,
@@ -24,6 +28,35 @@ from mudae_badge_setter import (
     runtime_file_path,
     screen_fraction_geometry,
 )
+
+
+class FakeStringVar:
+    def __init__(self, value=""):
+        self.value = value
+
+    def get(self):
+        return self.value
+
+    def set(self, value):
+        self.value = value
+
+
+class FakeUser32:
+    def __init__(self, minimized):
+        self.minimized = minimized
+        self.show_window_calls = []
+        self.foreground_calls = []
+
+    def IsIconic(self, hwnd):
+        return self.minimized
+
+    def ShowWindow(self, hwnd, command):
+        self.show_window_calls.append((hwnd, command))
+        return True
+
+    def SetForegroundWindow(self, hwnd):
+        self.foreground_calls.append(hwnd)
+        return True
 
 
 class AppPersistenceTests(unittest.TestCase):
@@ -116,6 +149,8 @@ class AppPersistenceTests(unittest.TestCase):
         self.assertIn("Message delay", help_text)
         self.assertIn("Budget kakera", help_text)
         self.assertIn("Edit Badge Cost", help_text)
+        self.assertIn("leaves Discord focused", help_text)
+        self.assertNotIn("returns focus to this window", help_text)
         self.assertIn("Set", help_text)
 
     def test_user_id_help_text_explains_copy_id_steps(self):
@@ -239,6 +274,54 @@ class AppPersistenceTests(unittest.TestCase):
             self.assertEqual(removed, 2)
             self.assertFalse(old_config.exists())
             self.assertFalse(old_settings.exists())
+
+
+class DiscordSenderFocusTests(unittest.TestCase):
+    def test_focus_discord_does_not_restore_open_window(self):
+        sender = DiscordSender.__new__(DiscordSender)
+        user32 = FakeUser32(minimized=False)
+        sender.user32 = user32
+
+        with mock.patch("mudae_badge_setter.time.sleep"):
+            sender.focus_discord(123)
+
+        self.assertEqual(user32.show_window_calls, [])
+        self.assertEqual(user32.foreground_calls, [123])
+
+    def test_focus_discord_restores_minimized_window(self):
+        sender = DiscordSender.__new__(DiscordSender)
+        user32 = FakeUser32(minimized=True)
+        sender.user32 = user32
+
+        with mock.patch("mudae_badge_setter.time.sleep"):
+            sender.focus_discord(123)
+
+        self.assertEqual(user32.show_window_calls, [(123, DiscordSender.SW_RESTORE)])
+        self.assertEqual(user32.foreground_calls, [123])
+
+
+class AppFinishBehaviorTests(unittest.TestCase):
+    def test_successful_finish_stays_on_discord_without_popup(self):
+        app = KakeraSetterApp.__new__(KakeraSetterApp)
+        events = []
+        app.is_sending = True
+        app.status_var = FakeStringVar("Sending")
+        app.config_name_var = FakeStringVar("")
+        app.configs = {}
+        app._current_badge_counts = lambda: {badge: 0 for badge in BADGES}
+        app._focus_app_window = lambda: events.append("focus")
+        app._update_badge_ui_state = lambda: events.append("update")
+        app.save_settings = lambda: events.append("save")
+        app.show_popup = lambda *_args, **_kwargs: events.append("popup")
+
+        KakeraSetterApp._finish_set_run(app)
+
+        self.assertFalse(app.is_sending)
+        self.assertIn("update", events)
+        self.assertIn("save", events)
+        self.assertNotIn("focus", events)
+        self.assertNotIn("popup", events)
+        self.assertEqual(app.status_var.get(), "Set to 0000000")
 
 
 if __name__ == "__main__":

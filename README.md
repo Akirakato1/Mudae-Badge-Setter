@@ -47,7 +47,7 @@ The total cost display uses that same order, so prerequisite levels bought befor
 
 ## Focus Behavior
 
-When you click `Set`, the app briefly focuses Discord, clicks near the lower center of the Discord window to focus the current channel message box, pastes each command, presses Enter, then returns focus to the app.
+When you click `Set`, the app focuses Discord, clicks near the lower center of the Discord window to focus the current channel message box, pastes each command, presses Enter, then leaves Discord focused. If Discord is already open, the app does not call Windows restore on it, so a maximized Discord window should keep its size.
 
 If Discord misses messages, increase the message delay.
 

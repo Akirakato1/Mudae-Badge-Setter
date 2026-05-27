@@ -146,7 +146,7 @@ HELP_LINES = (
     "13. Use Delete to remove the selected or named configuration.",
     "14. Click Set to run the sequence.",
     "",
-    "When Set runs, the app briefly focuses Discord, clicks the current channel message box, sends the refund/confirm commands, sends the badge commands, then returns focus to this window.",
+    "When Set runs, the app focuses Discord without restoring an already-open window, clicks the current channel message box, sends the refund/confirm commands, sends the badge commands, and leaves Discord focused.",
 )
 USER_ID_HELP_TEXT = """How to get your Discord user ID:
 
@@ -309,6 +309,8 @@ class DiscordSender:
         self.user32.EnumWindows.restype = wintypes.BOOL
         self.user32.IsWindowVisible.argtypes = [wintypes.HWND]
         self.user32.IsWindowVisible.restype = wintypes.BOOL
+        self.user32.IsIconic.argtypes = [wintypes.HWND]
+        self.user32.IsIconic.restype = wintypes.BOOL
         self.user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
         self.user32.GetWindowTextLengthW.restype = ctypes.c_int
         self.user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
@@ -360,8 +362,9 @@ class DiscordSender:
         return matches[0][0]
 
     def focus_discord(self, hwnd):
-        self.user32.ShowWindow(hwnd, self.SW_RESTORE)
-        time.sleep(0.2)
+        if self.user32.IsIconic(hwnd):
+            self.user32.ShowWindow(hwnd, self.SW_RESTORE)
+            time.sleep(0.2)
         self.user32.SetForegroundWindow(hwnd)
         time.sleep(0.4)
 
@@ -1146,10 +1149,10 @@ class KakeraSetterApp:
             pass
 
     def _finish_set_run(self, error=None):
-        self._focus_app_window()
         self.is_sending = False
         self._update_badge_ui_state()
         if error:
+            self._focus_app_window()
             self.status_var.set("Send failed")
             self.show_popup(APP_TITLE, error)
             return
@@ -1164,7 +1167,6 @@ class KakeraSetterApp:
         )
         result_message = format_set_result_message(result_name, self._current_badge_counts())
         self.status_var.set(result_message)
-        self.show_popup(APP_TITLE, result_message)
 
 
 def main():
