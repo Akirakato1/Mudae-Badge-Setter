@@ -6,6 +6,7 @@ from mudae_logic import (
     badge_info_lines,
     badge_prerequisite_status,
     build_command_sequence,
+    budget_allows_badge_increase,
     clear_locked_badges,
     configuration_prerequisite_errors,
     default_badge_data,
@@ -16,6 +17,7 @@ from mudae_logic import (
     seed_default_configurations,
     normalize_config,
     total_kakera_cost,
+    validate_budget,
     validate_delay,
     validate_user_id,
 )
@@ -237,6 +239,34 @@ class MudaeLogicTests(unittest.TestCase):
         self.assertEqual(next_cost["base_cost"], 3000)
         self.assertEqual(next_cost["cost"], 2250)
         self.assertTrue(next_cost["discounted"])
+
+    def test_validate_budget_accepts_blank_and_comma_separated_amount(self):
+        self.assertIsNone(validate_budget(""))
+        self.assertEqual(validate_budget(" 100,000 "), 100000)
+
+    def test_validate_budget_rejects_negative_or_non_numeric_amount(self):
+        with self.assertRaises(ValueError):
+            validate_budget("-1")
+        with self.assertRaises(ValueError):
+            validate_budget("100k")
+
+    def test_budget_allows_badge_increase_when_new_total_fits(self):
+        counts = {badge: 0 for badge in BADGES}
+
+        self.assertTrue(budget_allows_badge_increase(counts, "bronze", "1,000"))
+        self.assertFalse(budget_allows_badge_increase(counts, "bronze", "999"))
+
+    def test_budget_allows_badge_increase_ignores_blank_budget(self):
+        counts = {badge: 0 for badge in BADGES}
+
+        self.assertTrue(budget_allows_badge_increase(counts, "diamond", ""))
+
+    def test_budget_allows_badge_increase_uses_ruby_discounted_plan(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 2, "silver": 2, "gold": 2, "ruby": 4})
+
+        self.assertFalse(budget_allows_badge_increase(counts, "bronze", "90,249"))
+        self.assertTrue(budget_allows_badge_increase(counts, "bronze", "90,250"))
 
     def test_badge_prerequisite_status_reports_locked_badges(self):
         counts = {badge: 0 for badge in BADGES}

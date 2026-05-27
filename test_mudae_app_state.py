@@ -27,7 +27,7 @@ from mudae_badge_setter import (
 
 
 class AppPersistenceTests(unittest.TestCase):
-    def test_settings_store_saves_only_user_id_and_delay(self):
+    def test_settings_store_saves_only_user_id_delay_and_budget(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "settings.json"
             store = SettingsStore(path)
@@ -36,6 +36,7 @@ class AppPersistenceTests(unittest.TestCase):
                     "config_name": "main",
                     "user_id": "718568383347556424",
                     "delay": "1.5",
+                    "budget": "100,000",
                     "badges": {"bronze": 2, "diamond": 4},
                 }
             )
@@ -47,6 +48,7 @@ class AppPersistenceTests(unittest.TestCase):
         self.assertNotIn("badges", raw_file)
         self.assertEqual(loaded["user_id"], "718568383347556424")
         self.assertEqual(loaded["delay"], 1.5)
+        self.assertEqual(loaded["budget"], 100000)
 
     def test_config_store_saves_only_badge_counts(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -112,6 +114,7 @@ class AppPersistenceTests(unittest.TestCase):
         self.assertIn("Open Discord", help_text)
         self.assertIn("Enter your discord userID.", help_text)
         self.assertIn("Message delay", help_text)
+        self.assertIn("Budget kakera", help_text)
         self.assertIn("Edit Badge Cost", help_text)
         self.assertIn("Set", help_text)
 

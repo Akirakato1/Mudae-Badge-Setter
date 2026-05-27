@@ -90,9 +90,9 @@ EMBEDDED_BADGE_DATA_JSON = r"""{
       "prerequisites": [
         {
           "all_of": {
-            "bronze": 1,
-            "gold": 1,
-            "silver": 1
+            "bronze": 2,
+            "gold": 2,
+            "silver": 2
           }
         },
         {
@@ -114,9 +114,9 @@ EMBEDDED_BADGE_DATA_JSON = r"""{
       "prerequisites": [
         {
           "all_of": {
-            "bronze": 2,
-            "gold": 2,
-            "silver": 2
+            "bronze": 1,
+            "gold": 1,
+            "silver": 1
           }
         },
         {
@@ -187,6 +187,17 @@ def validate_delay(raw_delay):
     if delay <= 0:
         raise ValueError("Delay must be greater than 0.")
     return delay
+
+
+def validate_budget(raw_budget):
+    if raw_budget is None:
+        return None
+    budget_text = str(raw_budget).strip().replace(",", "")
+    if not budget_text:
+        return None
+    if not budget_text.isdigit():
+        raise ValueError("Budget kakera must be a whole number.")
+    return int(budget_text)
 
 
 def clamp_badge_count(value):
@@ -460,6 +471,24 @@ def purchase_level_items(raw_counts, badge_data=None):
 
 def total_kakera_cost(raw_counts, badge_data=None):
     return sum(item["cost"] for item in purchase_level_items(raw_counts, badge_data))
+
+
+def budget_allows_badge_increase(raw_counts, badge, raw_budget, badge_data=None):
+    budget = validate_budget(raw_budget)
+    if budget is None:
+        return True
+    badge = str(badge).lower()
+    if badge not in BADGES:
+        return False
+    badge_counts = normalize_badge_counts(raw_counts)
+    if badge_counts[badge] >= 4:
+        return False
+    candidate_counts = dict(badge_counts)
+    candidate_counts[badge] += 1
+    try:
+        return total_kakera_cost(candidate_counts, badge_data) <= budget
+    except ValueError:
+        return False
 
 
 def next_level_kakera_cost(raw_counts, badge, badge_data=None):

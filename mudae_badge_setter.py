@@ -18,6 +18,7 @@ from mudae_logic import (
     badge_info_lines,
     badge_prerequisite_status,
     build_command_sequence,
+    budget_allows_badge_increase,
     clear_locked_badges,
     configuration_prerequisite_errors,
     find_matching_config_name,
@@ -29,6 +30,7 @@ from mudae_logic import (
     normalize_badge_counts,
     seed_default_configurations,
     total_kakera_cost,
+    validate_budget,
     validate_delay,
     validate_user_id,
 )
@@ -132,16 +134,17 @@ HELP_LINES = (
     "1. Open Discord desktop to the text channel where Mudae should receive commands.",
     "2. Enter your discord userID.",
     "3. Set the Message delay. Use a larger value if Discord misses messages.",
-    "4. Set badge counts from 0 to 4.",
-    "5. Locked badges stay at 0 until their prerequisites are met.",
-    "6. Check the total cost and each badge's next-level cost.",
-    "7. Click Edit Badge Cost to change badge prices.",
-    "8. Click a badge name to view its costs, prerequisites, and perks.",
-    "9. Click New to clear the name and badge counts for a fresh configuration.",
-    "10. Enter a configuration name and click Save / Update to save the current badge counts.",
-    "11. Click a saved configuration to load it into the fields.",
-    "12. Use Delete to remove the selected or named configuration.",
-    "13. Click Set to run the sequence.",
+    "4. Optionally set Budget kakera to stop increases that would exceed your budget.",
+    "5. Set badge counts from 0 to 4.",
+    "6. Locked badges stay at 0 until their prerequisites are met.",
+    "7. Check the total cost and each badge's next-level cost.",
+    "8. Click Edit Badge Cost to change badge prices.",
+    "9. Click a badge name to view its costs, prerequisites, and perks.",
+    "10. Click New to clear the name and badge counts for a fresh configuration.",
+    "11. Enter a configuration name and click Save / Update to save the current badge counts.",
+    "12. Click a saved configuration to load it into the fields.",
+    "13. Use Delete to remove the selected or named configuration.",
+    "14. Click Set to run the sequence.",
     "",
     "When Set runs, the app briefly focuses Discord, clicks the current channel message box, sends the refund/confirm commands, sends the badge commands, then returns focus to this window.",
 )
@@ -663,9 +666,14 @@ class SettingsStore:
             delay = validate_delay(str(state.get("delay", DEFAULT_DELAY)))
         except ValueError:
             delay = DEFAULT_DELAY
+        try:
+            budget = validate_budget(state.get("budget", ""))
+        except ValueError:
+            budget = None
         return {
             "user_id": str(state.get("user_id", "")).strip(),
             "delay": delay,
+            "budget": "" if budget is None else budget,
         }
 
 
@@ -686,13 +694,15 @@ class KakeraSetterApp:
         self.configs = seed_default_configurations(self.store.load(), self.badge_data)
         self.store.save(self.configs)
         self.badge_vars = {}
-        self.badge_spinboxes = {}
+        self.badge_decrement_buttons = {}
+        self.badge_increment_buttons = {}
         self.badge_next_cost_vars = {}
         self.is_sending = False
         self.is_updating_badge_ui = False
 
         self.user_id_var = tk.StringVar()
         self.delay_var = tk.StringVar(value=str(DEFAULT_DELAY))
+        self.budget_var = tk.StringVar()
         self.config_name_var = tk.StringVar()
         self.status_var = tk.StringVar(value="Ready")
         self.total_cost_var = tk.StringVar(value="Total cost: 0 kakera")
@@ -709,7 +719,7 @@ class KakeraSetterApp:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main.columnconfigure(1, weight=1)
-        main.rowconfigure(4, weight=1)
+        main.rowconfigure(5, weight=1)
 
         ttk.Label(main, text="Discord user ID").grid(row=0, column=0, sticky="w", padx=(0, 10), pady=4)
         ttk.Entry(main, textvariable=self.user_id_var).grid(row=0, column=1, sticky="ew", pady=4)
@@ -717,8 +727,12 @@ class KakeraSetterApp:
         ttk.Label(main, text="Message delay").grid(row=1, column=0, sticky="w", padx=(0, 10), pady=4)
         ttk.Entry(main, textvariable=self.delay_var, width=10).grid(row=1, column=1, sticky="w", pady=4)
 
+        ttk.Label(main, text="Budget kakera").grid(row=2, column=0, sticky="w", padx=(0, 10), pady=4)
+        ttk.Entry(main, textvariable=self.budget_var, width=14).grid(row=2, column=1, sticky="w", pady=4)
+        self.budget_var.trace_add("write", lambda *_args: self._update_badge_ui_state())
+
         badge_frame = ttk.LabelFrame(main, text="Badges", padding=10)
-        badge_frame.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(12, 8))
+        badge_frame.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(12, 8))
         for index, badge in enumerate(BADGES):
             badge_frame.columnconfigure(index, weight=1)
             badge_label = tk.Label(
@@ -732,18 +746,31 @@ class KakeraSetterApp:
             badge_label.bind("<Button-1>", lambda _event, badge=badge: self.show_badge_info(badge))
             var = tk.StringVar(value="0")
             self.badge_vars[badge] = var
-            spinbox = tk.Spinbox(
-                badge_frame,
-                from_=0,
-                to=4,
-                width=4,
-                textvariable=var,
-                justify="center",
-                wrap=False,
-                command=self._update_badge_ui_state,
+            count_frame = ttk.Frame(badge_frame)
+            count_frame.grid(row=1, column=index, padx=4)
+            decrement_button = ttk.Button(
+                count_frame,
+                text="-",
+                width=2,
+                command=lambda badge=badge: self.change_badge_count(badge, -1),
             )
-            spinbox.grid(row=1, column=index, padx=4)
-            self.badge_spinboxes[badge] = spinbox
+            decrement_button.grid(row=0, column=0)
+            ttk.Label(
+                count_frame,
+                textvariable=var,
+                anchor="center",
+                justify="center",
+                width=3,
+            ).grid(row=0, column=1, padx=2)
+            increment_button = ttk.Button(
+                count_frame,
+                text="+",
+                width=2,
+                command=lambda badge=badge: self.change_badge_count(badge, 1),
+            )
+            increment_button.grid(row=0, column=2)
+            self.badge_decrement_buttons[badge] = decrement_button
+            self.badge_increment_buttons[badge] = increment_button
             self.badge_next_cost_vars[badge] = tk.StringVar()
             ttk.Label(
                 badge_frame,
@@ -763,7 +790,7 @@ class KakeraSetterApp:
         )
 
         config_frame = ttk.LabelFrame(main, text="Configurations", padding=10)
-        config_frame.grid(row=3, column=0, columnspan=2, sticky="ew", pady=8)
+        config_frame.grid(row=4, column=0, columnspan=2, sticky="ew", pady=8)
         config_frame.columnconfigure(1, weight=1)
 
         ttk.Label(config_frame, text="Name").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
@@ -791,7 +818,7 @@ class KakeraSetterApp:
         )
 
         list_frame = ttk.Frame(main)
-        list_frame.grid(row=4, column=0, columnspan=2, sticky="nsew", pady=8)
+        list_frame.grid(row=5, column=0, columnspan=2, sticky="nsew", pady=8)
         list_frame.columnconfigure(0, weight=1)
         list_frame.rowconfigure(0, weight=1)
 
@@ -804,7 +831,7 @@ class KakeraSetterApp:
         self.config_list.configure(yscrollcommand=scrollbar.set)
 
         action_frame = ttk.Frame(main)
-        action_frame.grid(row=5, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+        action_frame.grid(row=6, column=0, columnspan=2, sticky="ew", pady=(8, 0))
         action_frame.columnconfigure(2, weight=1)
 
         ttk.Button(action_frame, text="?", width=3, command=self.show_help).grid(
@@ -833,6 +860,44 @@ class KakeraSetterApp:
 
     def _current_badge_counts(self):
         return {badge: var.get() for badge, var in self.badge_vars.items()}
+
+    def _budget_error(self):
+        try:
+            validate_budget(self.budget_var.get())
+        except ValueError as exc:
+            return str(exc)
+        return ""
+
+    def _can_increase_badge(self, badge, counts=None):
+        badge = str(badge).lower()
+        if self.is_sending or badge not in BADGES:
+            return False
+        counts = normalize_badge_counts(counts or self._current_badge_counts())
+        if counts[badge] >= 4:
+            return False
+        if not badge_prerequisite_status(badge, counts)["unlocked"]:
+            return False
+        try:
+            return budget_allows_badge_increase(counts, badge, self.budget_var.get(), self.badge_data)
+        except ValueError:
+            return False
+
+    def change_badge_count(self, badge, delta):
+        badge = str(badge).lower()
+        if badge not in self.badge_vars:
+            return
+        counts = normalize_badge_counts(self._current_badge_counts())
+        current = counts[badge]
+        if delta > 0:
+            if not self._can_increase_badge(badge, counts):
+                self.status_var.set(self._budget_error() or "Budget limit reached")
+                return
+            target = current + 1
+        else:
+            target = current - 1
+        target = max(0, min(4, target))
+        if target != current:
+            self.badge_vars[badge].set(str(target))
 
     def _prerequisite_errors(self):
         return configuration_prerequisite_errors(self._current_badge_counts())
@@ -870,11 +935,25 @@ class KakeraSetterApp:
                 self.badge_vars[badge].set(str(cleared_counts[badge]))
 
             counts = self._current_badge_counts()
+            normalized_counts = normalize_badge_counts(counts)
+            budget_error = self._budget_error()
             for badge in BADGES:
                 status = badge_prerequisite_status(badge, counts)
                 locked = not status["unlocked"]
-                if badge in self.badge_spinboxes:
-                    self.badge_spinboxes[badge].configure(state=tk.DISABLED if locked else tk.NORMAL)
+                current_count = normalized_counts[badge]
+                decrement_state = tk.NORMAL if not self.is_sending and current_count > 0 else tk.DISABLED
+                increment_state = (
+                    tk.NORMAL
+                    if not locked
+                    and not self.is_sending
+                    and not budget_error
+                    and self._can_increase_badge(badge, normalized_counts)
+                    else tk.DISABLED
+                )
+                if badge in self.badge_decrement_buttons:
+                    self.badge_decrement_buttons[badge].configure(state=decrement_state)
+                if badge in self.badge_increment_buttons:
+                    self.badge_increment_buttons[badge].configure(state=increment_state)
                 if badge in self.badge_next_cost_vars:
                     self.badge_next_cost_vars[badge].set(self._next_cost_label(badge, locked))
             errors = configuration_prerequisite_errors(counts)
@@ -882,12 +961,21 @@ class KakeraSetterApp:
                 self.total_cost_var.set("Total cost: prerequisites needed")
                 self.status_var.set("Locked badge prerequisites missing")
             else:
-                self.total_cost_var.set(
-                    f"Total cost: {format_kakera(total_kakera_cost(counts, self.badge_data))} kakera"
-                )
-                if cleared_badges:
+                total_cost = total_kakera_cost(counts, self.badge_data)
+                total_label = f"Total cost: {format_kakera(total_cost)} kakera"
+                budget = None if budget_error else validate_budget(self.budget_var.get())
+                if budget is not None and total_cost > budget:
+                    total_label = f"{total_label} (over budget)"
+                self.total_cost_var.set(total_label)
+                if budget_error:
+                    self.status_var.set(budget_error)
+                elif cleared_badges:
                     self.status_var.set("Locked badge reset to 0")
-                elif self.status_var.get() == "Locked badge prerequisites missing":
+                elif self.status_var.get() in (
+                    "Budget kakera must be a whole number.",
+                    "Budget limit reached",
+                    "Locked badge prerequisites missing",
+                ):
                     self.status_var.set("Ready")
             self._update_set_button_state(errors)
         finally:
@@ -997,12 +1085,14 @@ class KakeraSetterApp:
         return {
             "user_id": self.user_id_var.get(),
             "delay": self.delay_var.get(),
+            "budget": self.budget_var.get(),
         }
 
     def _load_settings(self):
         settings = self.settings_store.load()
         self.user_id_var.set(settings["user_id"])
         self.delay_var.set(str(settings["delay"]))
+        self.budget_var.set(str(settings["budget"]))
         self.settings_store.save(settings)
 
     def save_settings(self):
@@ -1029,6 +1119,7 @@ class KakeraSetterApp:
 
         self.is_sending = True
         self._update_set_button_state([])
+        self._update_badge_ui_state()
         self.status_var.set(f"Sending {len(commands)} messages...")
         worker = threading.Thread(
             target=self._send_worker,

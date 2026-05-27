@@ -22,13 +22,14 @@ python mudae_badge_setter.py
 2. Run the app.
 3. Enter your discord userID, for example `718568383347556424`.
 4. Set the message delay. The default is `0.8` seconds.
-5. Set each badge count from `0` to `4`.
-6. Check the live total cost and the next-level cost shown under each badge.
-7. Click `Edit Badge Cost` to change the badge prices used by the cost display.
-8. Click `New` to clear the name and badge counts for a fresh configuration.
-9. Optionally enter a configuration name and click `Save / Update` to save the current badge counts.
-10. Click `Delete` to remove the selected or named configuration.
-11. Click `Set`.
+5. Optionally enter `Budget kakera`. The `+` buttons disable when the next badge level would push the plan over budget, while `-` still works so you can tick counts down.
+6. Set each badge count from `0` to `4`.
+7. Check the live total cost and the next-level cost shown under each badge.
+8. Click `Edit Badge Cost` to change the badge prices used by the cost display.
+9. Click `New` to clear the name and badge counts for a fresh configuration.
+10. Optionally enter a configuration name and click `Save / Update` to save the current badge counts.
+11. Click `Delete` to remove the selected or named configuration.
+12. Click `Set`.
 
 Click the `?` button in the lower-left corner of the app to show these usage notes inside the app. In that help popup, click `userID` to see how to find and copy your Discord ID.
 Click a badge name to show its costs, prerequisites, and perks.
@@ -58,7 +59,7 @@ If `configs.json` is empty or missing, the app seeds three built-in configuratio
 
 Clicking a saved configuration loads only its badge counts into the UI. `New` clears the current name, list selection, and badge counts so you can build a fresh configuration. Saving again with the same name updates it. `Delete` removes the selected configuration, or the configuration named in the text field if none is selected.
 
-The app keeps permanent user ID and delay settings in `%APPDATA%\Mudae Badge Setter\settings.json`. This file stores only `user_id` and `delay`. Those fields are restored automatically the next time you open the app; the previous badge configuration is not auto-loaded.
+The app keeps permanent user ID, delay, and budget settings in `%APPDATA%\Mudae Badge Setter\settings.json`. This file stores only `user_id`, `delay`, and `budget`. Those fields are restored automatically the next time you open the app; the previous badge configuration is not auto-loaded.
 
 Badge costs are written to `%APPDATA%\Mudae Badge Setter\badge_data.json`. On first launch, the app creates this file with the built-in default badge costs, prerequisites, perks, and default configuration definitions. Click `Edit Badge Cost` to edit the cost grid in the app; the app immediately uses the saved costs for total cost, next-level cost, and badge info displays.
 
