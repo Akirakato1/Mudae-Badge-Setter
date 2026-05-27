@@ -116,6 +116,29 @@ class MudaeLogicTests(unittest.TestCase):
             ],
         )
 
+    def test_ruby_four_two_level_four_unlock_buys_non_prerequisites_after_ruby(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 4, "silver": 1, "gold": 4, "ruby": 4})
+
+        commands = build_command_sequence("718568383347556424", counts)
+
+        self.assertEqual(
+            commands,
+            [
+                "$kakerarefund <@718568383347556424>",
+                "confirm",
+                "$bronze 4",
+                "y",
+                "$gold 4",
+                "y",
+                "$ruby 4",
+                "y",
+                "$silver 1",
+                "y",
+            ],
+        )
+        self.assertEqual(total_kakera_cost(counts), 111500)
+
     def test_ruby_four_prerequisite_split_uses_custom_badge_costs(self):
         counts = {badge: 0 for badge in BADGES}
         counts.update({"bronze": 2, "silver": 4, "gold": 2, "ruby": 4, "diamond": 4})
