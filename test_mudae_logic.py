@@ -141,7 +141,7 @@ class MudaeLogicTests(unittest.TestCase):
                 "y",
                 "$sapphire 4",
                 "y",
-                "$gold 3",
+                "$gold",
                 "y",
             ],
         )
@@ -167,10 +167,29 @@ class MudaeLogicTests(unittest.TestCase):
                 "y",
                 "$diamond 4",
                 "y",
-                "$gold 3",
+                "$gold",
                 "y",
             ],
         )
+
+    def test_gold_three_from_zero_avoids_gold_three_command(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts["gold"] = 3
+
+        commands = build_command_sequence("718568383347556424", counts)
+
+        self.assertEqual(
+            commands,
+            [
+                "$kakerarefund <@718568383347556424>",
+                "confirm",
+                "$gold 2",
+                "y",
+                "$gold",
+                "y",
+            ],
+        )
+        self.assertNotIn("$gold 3", commands)
 
     def test_ruby_four_two_level_four_unlock_buys_non_prerequisites_after_ruby(self):
         counts = {badge: 0 for badge in BADGES}

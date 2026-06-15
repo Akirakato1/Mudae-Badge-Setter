@@ -565,8 +565,15 @@ def build_command_sequence(raw_user_id, raw_badge_counts, badge_data=None):
     if errors:
         raise ValueError("; ".join(errors))
     commands = [f"$kakerarefund <@{user_id}>", "confirm"]
+    owned = {badge: 0 for badge in BADGES}
     for badge, target_level in command_purchase_steps(badge_counts, badge_data):
-        commands.extend([f"${badge} {target_level}", "y"])
+        if badge == "gold" and target_level == 3:
+            if owned[badge] < 2:
+                commands.extend(["$gold 2", "y"])
+            commands.extend(["$gold", "y"])
+        else:
+            commands.extend([f"${badge} {target_level}", "y"])
+        owned[badge] = target_level
     return commands
 
 
