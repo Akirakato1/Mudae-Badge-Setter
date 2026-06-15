@@ -118,6 +118,60 @@ class MudaeLogicTests(unittest.TestCase):
             ],
         )
 
+    def test_gold_three_is_deferred_after_other_post_ruby_purchases(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 2, "silver": 4, "gold": 3, "sapphire": 4, "ruby": 4})
+
+        commands = build_command_sequence("718568383347556424", counts)
+
+        self.assertEqual(
+            commands,
+            [
+                "$kakerarefund <@718568383347556424>",
+                "confirm",
+                "$bronze 2",
+                "y",
+                "$silver 2",
+                "y",
+                "$gold 2",
+                "y",
+                "$ruby 4",
+                "y",
+                "$silver 4",
+                "y",
+                "$sapphire 4",
+                "y",
+                "$gold 3",
+                "y",
+            ],
+        )
+
+    def test_gold_three_is_deferred_after_diamond_purchase(self):
+        counts = {badge: 0 for badge in BADGES}
+        counts.update({"bronze": 2, "silver": 2, "gold": 3, "ruby": 4, "diamond": 4})
+
+        commands = build_command_sequence("718568383347556424", counts)
+
+        self.assertEqual(
+            commands,
+            [
+                "$kakerarefund <@718568383347556424>",
+                "confirm",
+                "$bronze 2",
+                "y",
+                "$silver 2",
+                "y",
+                "$gold 2",
+                "y",
+                "$ruby 4",
+                "y",
+                "$diamond 4",
+                "y",
+                "$gold 3",
+                "y",
+            ],
+        )
+
     def test_ruby_four_two_level_four_unlock_buys_non_prerequisites_after_ruby(self):
         counts = {badge: 0 for badge in BADGES}
         counts.update({"bronze": 4, "silver": 1, "gold": 4, "ruby": 4})

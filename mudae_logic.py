@@ -397,6 +397,13 @@ def command_purchase_steps(badge_counts, badge_data=None):
     owned = {badge: 0 for badge in BADGES}
     steps = []
 
+    def purchase_order():
+        order = list(BADGES)
+        if badge_counts["gold"] == 3:
+            order.remove("gold")
+            order.append("gold")
+        return order
+
     def buy_to_level(badge, level):
         level = min(max(0, level), badge_counts[badge])
         if level > owned[badge]:
@@ -437,7 +444,7 @@ def command_purchase_steps(badge_counts, badge_data=None):
             buy_to_level(badge, level)
         buy_to_level("ruby", 4)
 
-    for badge in BADGES:
+    for badge in purchase_order():
         if owned[badge] >= badge_counts[badge]:
             continue
         if badge in BASIC_PREREQUISITE_LEVELS:
